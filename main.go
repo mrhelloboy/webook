@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/mrhelloboy/wehook/web"
+	"github.com/mrhelloboy/wehook/internal/web"
 	"strings"
 	"time"
 )
