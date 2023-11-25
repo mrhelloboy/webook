@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/domain"
@@ -89,6 +90,12 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 		Email:    req.Email,
 		Password: req.Password,
 	})
+
+	if errors.Is(err, service.ErrUserDuplicateEmail) {
+		ctx.String(http.StatusOK, "邮箱已存在, 请换一个")
+		return
+	}
+
 	if err != nil {
 		ctx.String(http.StatusOK, "系统异常")
 		return
