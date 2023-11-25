@@ -14,7 +14,45 @@ import (
 )
 
 func main() {
+	db := initDB()
+	server := initWebServer()
 
+	user := initUser(db)
+	user.RegisterRouters(server)
+
+	err := server.Run(":8080")
+	if err != nil {
+		panic(err)
+	}
+}
+
+func initWebServer() *gin.Engine {
+	server := gin.Default()
+
+	// 跨域中间件
+	server.Use(cors.New(cors.Config{
+		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowCredentials: true,
+		AllowOriginFunc: func(origin string) bool {
+			// 开发环境允许跨域
+			if strings.HasPrefix(origin, "http://localhost") {
+				return true
+			}
+			return strings.Contains(origin, "your-company.com")
+		},
+		MaxAge: 1 * time.Hour,
+	}))
+	return server
+}
+
+func initUser(db *gorm.DB) *web.UserHandler {
+	ud := dao.NewUserDAO(db)
+	repo := repository.NewUserRepository(ud)
+	srv := service.NewUserService(repo)
+	return web.NewUserHandler(srv)
+}
+
+func initDB() *gorm.DB {
 	// 数据库连接
 	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13306)/webook?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
 	if err != nil {
@@ -29,30 +67,5 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	server := gin.Default()
-
-	server.Use(cors.New(cors.Config{
-		AllowHeaders:     []string{"Content-Type", "Authorization"},
-		AllowCredentials: true,
-		AllowOriginFunc: func(origin string) bool {
-			// 开发环境允许跨域
-			if strings.HasPrefix(origin, "http://localhost") {
-				return true
-			}
-			return strings.Contains(origin, "your-company.com")
-		},
-		MaxAge: 1 * time.Hour,
-	}))
-
-	userDAO := dao.NewUserDAO(db)
-	userRepo := repository.NewUserRepository(userDAO)
-	userSrv := service.NewUserService(userRepo)
-
-	userHandler := web.NewUserHandler(userSrv)
-	userHandler.RegisterRouters(server)
-	err = server.Run(":8080")
-	if err != nil {
-		panic(err)
-	}
+	return db
 }
