@@ -3,6 +3,7 @@ package web
 import (
 	"errors"
 	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/service"
@@ -38,7 +39,32 @@ func (u *UserHandler) RegisterRouters(server *gin.Engine) {
 
 // Login 登录用户
 func (u *UserHandler) Login(ctx *gin.Context) {
+	type LoginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginReq
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
 
+	user, err := u.svc.Login(ctx, req.Email, req.Password)
+	if errors.Is(err, service.ErrInvalidUserOrPassword) {
+		ctx.String(http.StatusOK, "用户名或者密码不对")
+		return
+	}
+	if err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+
+	// 设置 sessions
+	sess := sessions.Default(ctx)
+	sess.Set("userId", user.Id)
+	_ = sess.Save()
+
+	ctx.String(http.StatusOK, "登录成功")
+	return
 }
 
 // SignUp 注册用户
@@ -111,5 +137,5 @@ func (u *UserHandler) Edit(ctx *gin.Context) {
 
 // Profile 用户信息
 func (u *UserHandler) Profile(ctx *gin.Context) {
-
+	ctx.String(http.StatusOK, "这是你的Profile")
 }
