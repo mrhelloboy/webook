@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/repository"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
@@ -47,7 +47,26 @@ func initWebServer() *gin.Engine {
 	}))
 
 	// sessions 中间件
-	store := cookie.NewStore([]byte("secret"))
+
+	// 不建议使用 Cookie 方式存放 session
+	//store := cookie.NewStore([]byte("secret"))
+
+	// 单体应用可以使用内存方式存放 session。参数说明：
+	// 第一个为：authentication key:
+	// 第二个为：encryption key:
+	// store := memstore.NewStore([]byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"), []byte("gJbN8K6q2sUc2PVbDM3DfJwYNrrHqmXg"))
+
+	// 分布式应用建议用 Redis 方式存放 session。参数说明：
+	// size: 最大空闲连接数.
+	// network: 一般都是 tcp
+	// address: host:port
+	// password: redis-password
+	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
+		[]byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"),
+		[]byte("gJbN8K6q2sUc2PVbDM3DfJwYNrrHqmXg"))
+	if err != nil {
+		panic(err)
+	}
 	server.Use(sessions.Sessions("ssid", store))
 	server.Use(middleware.NewLoginMiddlewareBuilder().
 		IgnorePath("/user/signup").
