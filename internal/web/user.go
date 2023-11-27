@@ -32,6 +32,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 
 func (u *UserHandler) RegisterRouters(server *gin.Engine) {
 	server.POST("/user/login", u.Login)
+	server.POST("/user/logout", u.Logout)
 	server.POST("/user/signup", u.SignUp)
 	server.POST("/user/edit", u.Edit)
 	server.GET("/user/profile", u.Profile)
@@ -61,9 +62,28 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 	// 设置 sessions
 	sess := sessions.Default(ctx)
 	sess.Set("userId", user.Id)
+	// todo: Secure 和 HttpOnly 要在生产环境开启
+	//sess.Options(sessions.Options{
+	//	Secure:   true,
+	//	HttpOnly: true,
+	//})
 	_ = sess.Save()
 
 	ctx.String(http.StatusOK, "登录成功")
+	return
+}
+
+// Logout 退出登录, 清除用户登录状态所保存的相关信息
+func (u *UserHandler) Logout(ctx *gin.Context) {
+	sess := sessions.Default(ctx)
+	sess.Options(sessions.Options{
+		//Secure: true,
+		//HttpOnly: true,
+		MaxAge: -1, // 立即过期
+	})
+	sess.Clear()
+	_ = sess.Save()
+	ctx.String(http.StatusOK, "退出成功")
 	return
 }
 
