@@ -76,6 +76,14 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			return
 		}
 
+		// 加强校验
+		if claims.UserAgent != ctx.Request.UserAgent() {
+			// 有安全问题
+			// todo: 写入监控
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
 		// jwt token 续约 -> 比较恶心
 		// 每 10 s 续约一次
 		now := time.Now()
