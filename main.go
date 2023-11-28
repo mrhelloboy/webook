@@ -8,6 +8,8 @@ import (
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/web"
 	"github.com/mrhelloboy/wehook/internal/web/middleware"
+	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/ratelimit"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -29,6 +31,16 @@ func main() {
 
 func initWebServer() *gin.Engine {
 	server := gin.Default()
+
+	// redis 客户端
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     "localhost:6379",
+		Password: "", // no password set
+		DB:       1,  // use default DB
+	})
+
+	// 限流
+	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 
 	// 跨域中间件
 	server.Use(cors.New(cors.Config{
