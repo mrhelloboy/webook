@@ -2,8 +2,6 @@ package main
 
 import (
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/repository"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
@@ -34,7 +32,10 @@ func initWebServer() *gin.Engine {
 
 	// 跨域中间件
 	server.Use(cors.New(cors.Config{
-		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowHeaders: []string{"Content-Type", "Authorization"},
+		// 允许跨域使用的 header，否则前端无法读取 x-jwt-token
+		// 前端读取 x-jwt-token 的值来配置 Authorization 头
+		ExposeHeaders:    []string{"x-jwt-token"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
 			// 开发环境允许跨域
@@ -61,16 +62,22 @@ func initWebServer() *gin.Engine {
 	// network: 一般都是 tcp
 	// address: host:port
 	// password: redis-password
-	store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
-		[]byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"),
-		[]byte("gJbN8K6q2sUc2PVbDM3DfJwYNrrHqmXg"))
-	if err != nil {
-		panic(err)
-	}
-	server.Use(sessions.Sessions("ssid", store))
-	server.Use(middleware.NewLoginMiddlewareBuilder().
+	//store, err := redis.NewStore(16, "tcp", "localhost:6379", "",
+	//	[]byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"),
+	//	[]byte("gJbN8K6q2sUc2PVbDM3DfJwYNrrHqmXg"))
+	//if err != nil {
+	//	panic(err)
+	//}
+	//server.Use(sessions.Sessions("ssid", store))
+	//server.Use(middleware.NewLoginMiddlewareBuilder().
+	//	IgnorePath("/user/signup").
+	//	IgnorePath("/user/login").
+	//	Build())
+
+	// 使用 jwt
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePath("/user/signup").
-		IgnorePath("/user/login").
+		IgnorePath("/user/loginJWT").
 		Build())
 
 	return server
