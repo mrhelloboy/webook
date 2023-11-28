@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webook
+  labels:
+    app: webook
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: webook
+  template:
+    metadata:
+      name: webook
+      labels:
+        app: webook
+    spec:
+      containers:
+        - name: webook
+          image: zhanqi/webook:v0.0.2
+          ports:
+            - containerPort: 8080
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      
