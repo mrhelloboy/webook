@@ -23,6 +23,10 @@ func main() {
 	user := initUser(db)
 	user.RegisterRouters(server)
 
+	//server := gin.Default()
+	//server.GET("/hello", func(ctx *gin.Context) {
+	//	ctx.String(200, "hello world")
+	//})
 	err := server.Run(":8080")
 	if err != nil {
 		panic(err)
@@ -34,7 +38,7 @@ func initWebServer() *gin.Engine {
 
 	// redis 客户端
 	redisClient := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
+		Addr:     "webook-redis:16379",
 		Password: "", // no password set
 		DB:       1,  // use default DB
 	})
@@ -104,7 +108,7 @@ func initUser(db *gorm.DB) *web.UserHandler {
 
 func initDB() *gorm.DB {
 	// 数据库连接
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13306)/webook?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
+	db, err := gorm.Open(mysql.Open("root:123456@tcp(webook-mysql:13301)/webook?charset=utf8mb4&parseTime=True&loc=Local"), &gorm.Config{})
 	if err != nil {
 		// 只会在初始化过程中 panic
 		// panic 相当于整个 goroutine 结束

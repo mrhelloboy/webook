@@ -43,6 +43,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		tokenHeader := ctx.GetHeader("Authorization")
 		if tokenHeader == "" {
 			// 没登录
+			log.Printf("== tokenHeader: %s", tokenHeader)
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -51,11 +52,13 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		segs := strings.Split(tokenHeader, " ")
 		if len(segs) != 2 {
 			// 格式错误 -> 可能有人在搞事
+			log.Printf("== segs: %v", segs)
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 		if segs[0] != "Bearer" || segs[1] == "" {
 			// 格式错误 -> 可能有人在搞事
+			log.Printf("== segs[0] != Bearer or segs[1] == '': %v", segs)
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -67,11 +70,13 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 
 		if err != nil {
 			// 解析失败
+			log.Println("jwt 解析失败：", err)
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 		if !token.Valid || claims.Uid == 0 {
 			// 解析失败
+			log.Println("token valid fail or claims.uid == 0")
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
@@ -80,15 +85,17 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		if claims.UserAgent != ctx.Request.UserAgent() {
 			// 有安全问题
 			// todo: 写入监控
+			log.Printf("claims.UserAgent (%s) != ctx.Request.UserAgent() %s\n", claims.UserAgent, ctx.Request.UserAgent())
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 
 		// jwt token 续约 -> 比较恶心
-		// 每 10 s 续约一次
+		// 每 1 分钟续约一次
 		now := time.Now()
-		if claims.ExpiresAt.Sub(now) < time.Second*50 {
-			claims.ExpiresAt = jwt.NewNumericDate(now.Add(time.Minute))
+		if claims.ExpiresAt.Sub(now) < (time.Duration(23*60+59) * time.Minute) {
+			log.Println("jwt 续约")
+			claims.ExpiresAt = jwt.NewNumericDate(now.Add(time.Hour * 24 * 60))
 			tokenStr, err := token.SignedString([]byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"))
 			if err != nil {
 				// log

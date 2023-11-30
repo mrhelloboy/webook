@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: webook
-          image: zhanqi/webook:v0.0.2
+          image: zhanqi/webook:v0.0.3
           ports:
             - containerPort: 8080
           imagePullPolicy: IfNotPresent
