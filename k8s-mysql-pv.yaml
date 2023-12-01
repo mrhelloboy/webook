@@ -12,4 +12,8 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   hostPath:
+    # 如果在 mac 上用 docker desktop 启动 k8s：
+    # docker run --pid=host --privileged -it --rm justincormack/nsenter1
+    # cd /containers/services/02-docker/rootfs/tmp/data/mysql
+    # docker 重启后，数据会丢失
     path: "/tmp/data/mysql"
