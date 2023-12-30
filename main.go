@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/config"
 	"github.com/mrhelloboy/wehook/internal/repository"
+	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/web"
@@ -19,9 +20,10 @@ import (
 
 func main() {
 	db := initDB()
-	server := initWebServer()
+	redisClient := initRedis()
+	server := initWebServer(redisClient)
 
-	user := initUser(db)
+	user := initUser(db, redisClient)
 	user.RegisterRouters(server)
 
 	//server := gin.Default()
@@ -34,15 +36,15 @@ func main() {
 	}
 }
 
-func initWebServer() *gin.Engine {
+func initWebServer(redisClient redis.Cmdable) *gin.Engine {
 	server := gin.Default()
 
 	// redis 客户端
-	redisClient := redis.NewClient(&redis.Options{
-		Addr:     config.Config.Redis.Addr,
-		Password: "", // no password set
-		DB:       1,  // use default DB
-	})
+	//redisClient := redis.NewClient(&redis.Options{
+	//	Addr:     config.Config.Redis.Addr,
+	//	Password: "", // no password set
+	//	DB:       1,  // use default DB
+	//})
 
 	// 限流
 	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
@@ -100,9 +102,10 @@ func initWebServer() *gin.Engine {
 	return server
 }
 
-func initUser(db *gorm.DB) *web.UserHandler {
+func initUser(db *gorm.DB, redisClient redis.Cmdable) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
-	repo := repository.NewUserRepository(ud)
+	uc := cache.NewUserCache(redisClient)
+	repo := repository.NewUserRepository(ud, uc)
 	srv := service.NewUserService(repo)
 	return web.NewUserHandler(srv)
 }
@@ -123,4 +126,15 @@ func initDB() *gorm.DB {
 		panic(err)
 	}
 	return db
+}
+
+func initRedis() *redis.Client {
+	// redis 连接
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:     config.Config.Redis.Addr,
+		Password: "", // no password set
+		DB:       1,  // use default DB
+	})
+
+	return redisClient
 }
