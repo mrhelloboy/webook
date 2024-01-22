@@ -8,6 +8,7 @@ import (
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
 	"github.com/mrhelloboy/wehook/internal/service"
+	"github.com/mrhelloboy/wehook/internal/service/sms/memory"
 	"github.com/mrhelloboy/wehook/internal/web"
 	"github.com/mrhelloboy/wehook/internal/web/middleware"
 	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/ratelimit"
@@ -97,17 +98,25 @@ func initWebServer(redisClient redis.Cmdable) *gin.Engine {
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePath("/user/signup").
 		IgnorePath("/user/loginJWT").
+		IgnorePath("/user/login_sms").
+		IgnorePath("/user/login_sms/code/send").
 		Build())
 
 	return server
 }
 
-func initUser(db *gorm.DB, redisClient redis.Cmdable) *web.UserHandler {
+func initUser(db *gorm.DB, rdb redis.Cmdable) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
-	uc := cache.NewUserCache(redisClient)
+	uc := cache.NewUserCache(rdb)
 	repo := repository.NewUserRepository(ud, uc)
-	srv := service.NewUserService(repo)
-	return web.NewUserHandler(srv)
+	userSvc := service.NewUserService(repo)
+
+	codeCache := cache.NewCodeCache(rdb)
+	codeRepo := repository.NewCodeRepository(codeCache)
+	smsSvc := memory.NewService()
+	codeSvc := service.NewCodeService(codeRepo, smsSvc)
+
+	return web.NewUserHandler(userSvc, codeSvc)
 }
 
 func initDB() *gorm.DB {

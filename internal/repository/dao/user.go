@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
@@ -9,8 +10,8 @@ import (
 )
 
 var (
-	ErrUserDuplicateEmail = errors.New("邮箱冲突")
-	ErrUserNotFound       = gorm.ErrRecordNotFound
+	ErrUserDuplicate = errors.New("邮箱或者手机号码冲突")
+	ErrUserNotFound  = gorm.ErrRecordNotFound
 )
 
 type UserDAO struct {
@@ -24,6 +25,12 @@ func NewUserDAO(db *gorm.DB) *UserDAO {
 func (dao *UserDAO) FindByEmail(ctx context.Context, email string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
+	return u, err
+}
+
+func (dao *UserDAO) FindByPhone(ctx context.Context, phone string) (User, error) {
+	var u User
+	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&u).Error
 	return u, err
 }
 
@@ -46,8 +53,8 @@ func (dao *UserDAO) Insert(ctx context.Context, u User) error {
 		// 数据库中1062错误码通常表示“唯一性约束冲突”
 		const uniqueConflictErrNo uint16 = 1062
 		if mysqlError.Number == uniqueConflictErrNo {
-			// 邮箱冲突
-			return ErrUserDuplicateEmail
+			// 邮箱或者手机号码冲突
+			return ErrUserDuplicate
 		}
 	}
 
@@ -56,9 +63,11 @@ func (dao *UserDAO) Insert(ctx context.Context, u User) error {
 
 // User 用户表 -> 对应数据库表结构
 type User struct {
-	Id       int64  `gorm:"primary_key,autoIncrement"`
-	Email    string `gorm:"unique"`
+	Id int64 `gorm:"primary_key,autoIncrement"`
+	// 唯一索引允许有多个空值，但不允许有多个""
+	Email    sql.NullString `gorm:"unique"`
 	Password string
-	Ctime    int64 // 创建时间，毫秒数
-	Utime    int64 // 更新时间，毫秒数
+	Phone    sql.NullString `gorm:"unique"`
+	Ctime    int64          // 创建时间，毫秒数
+	Utime    int64          // 更新时间，毫秒数
 }

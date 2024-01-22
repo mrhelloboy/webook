@@ -10,9 +10,21 @@ import (
 
 const codeTplId = "1877556"
 
+var (
+	ErrCodeSendTooMany        = repository.ErrCodeSendTooMany
+	ErrCodeVerifyTooManyTimes = repository.ErrCodeVerifyTooManyTimes
+)
+
 type CodeService struct {
 	repo *repository.CodeRepository
 	sms  sms.Service
+}
+
+func NewCodeService(repo *repository.CodeRepository, sms sms.Service) *CodeService {
+	return &CodeService{
+		repo: repo,
+		sms:  sms,
+	}
 }
 
 // Send 发验证码
@@ -45,5 +57,5 @@ func (svc *CodeService) generateCode() string {
 	// 随机生成 6 位数的数字
 	num := rand.Intn(1000000)
 	// 不够6位的，加上前导 0
-	return fmt.Sprintf("%6d", num)
+	return fmt.Sprintf("%06d", num)
 }
