@@ -15,6 +15,9 @@ import (
 
 const biz = "login"
 
+// 确保 UserHandler 实现了 handler 接口
+var _ handler = (*UserHandler)(nil)
+
 type UserHandler struct {
 	svc         *service.UserService
 	codeSvc     *service.CodeService
