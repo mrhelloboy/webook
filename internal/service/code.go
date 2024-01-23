@@ -15,20 +15,25 @@ var (
 	ErrCodeVerifyTooManyTimes = repository.ErrCodeVerifyTooManyTimes
 )
 
-type CodeService struct {
-	repo *repository.CodeRepository
+type CodeService interface {
+	Send(ctx context.Context, biz string, phone string) error
+	Verify(ctx context.Context, biz string, phone string, inputCode string) (bool, error)
+}
+
+type CodeSvc struct {
+	repo repository.CodeRepository
 	sms  sms.Service
 }
 
-func NewCodeService(repo *repository.CodeRepository, sms sms.Service) *CodeService {
-	return &CodeService{
+func NewCodeSvc(repo repository.CodeRepository, sms sms.Service) CodeService {
+	return &CodeSvc{
 		repo: repo,
 		sms:  sms,
 	}
 }
 
 // Send 发验证码
-func (svc *CodeService) Send(ctx context.Context, biz string, phone string) error {
+func (svc *CodeSvc) Send(ctx context.Context, biz string, phone string) error {
 	// 存在check-do something并发安全问题场景
 
 	// 生成一个验证码
@@ -49,11 +54,11 @@ func (svc *CodeService) Send(ctx context.Context, biz string, phone string) erro
 }
 
 // Verify 验证验证码
-func (svc *CodeService) Verify(ctx context.Context, biz string, phone string, inputCode string) (bool, error) {
+func (svc *CodeSvc) Verify(ctx context.Context, biz string, phone string, inputCode string) (bool, error) {
 	return svc.repo.Verify(ctx, biz, phone, inputCode)
 }
 
-func (svc *CodeService) generateCode() string {
+func (svc *CodeSvc) generateCode() string {
 	// 随机生成 6 位数的数字
 	num := rand.Intn(1000000)
 	// 不够6位的，加上前导 0

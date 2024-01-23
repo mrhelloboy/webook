@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler) *gin.Engine {
+func InitGin(mws []gin.HandlerFunc, userhdr web.Handler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mws...)
 	userhdr.RegisterRouters(server)

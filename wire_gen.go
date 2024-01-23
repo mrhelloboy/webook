@@ -25,12 +25,12 @@ func InitWebServer() *gin.Engine {
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
-	userService := service.NewUserService(userRepository)
+	userService := service.NewUserSvc(userRepository)
 	codeCache := cache.NewCodeCache(cmdable)
-	codeRepository := repository.NewCodeRepository(codeCache)
+	codeRepository := repository.NewCachedCodeRepository(codeCache)
 	smsService := ioc.InitSMSService()
-	codeService := service.NewCodeService(codeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, codeService)
-	engine := ioc.InitGin(v, userHandler)
+	codeService := service.NewCodeSvc(codeRepository, smsService)
+	handler := web.NewUserHandler(userService, codeService)
+	engine := ioc.InitGin(v, handler)
 	return engine
 }

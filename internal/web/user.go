@@ -15,18 +15,18 @@ import (
 
 const biz = "login"
 
-// 确保 UserHandler 实现了 handler 接口
-var _ handler = (*UserHandler)(nil)
+// 确保 UserHandler 实现了 Handler 接口
+var _ Handler = (*UserHandler)(nil)
 
 type UserHandler struct {
-	svc         *service.UserService
-	codeSvc     *service.CodeService
+	svc         service.UserService
+	codeSvc     service.CodeService
 	phoneExp    *regexp.Regexp
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 }
 
-func NewUserHandler(svc *service.UserService, codeSvc *service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService) Handler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
