@@ -102,7 +102,7 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 		return
 	}
 
-	ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "验证码校验通过"})
+	ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "通过手机号登录成功"})
 }
 
 func (u *UserHandler) SendLoginSmsCode(ctx *gin.Context) {
