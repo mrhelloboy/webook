@@ -97,6 +97,7 @@ func (r *CachedUserRepository) domainToEntity(u domain.User) dao.User {
 		Id:       u.Id,
 		Email:    sql.NullString{String: u.Email, Valid: u.Email != ""},
 		Password: u.Password,
+		Nickname: u.Nickname,
 		Phone:    sql.NullString{String: u.Phone, Valid: u.Phone != ""},
 		Ctime:    u.Ctime.UnixMilli(),
 	}
@@ -108,6 +109,7 @@ func (r *CachedUserRepository) entityToDomain(u dao.User) domain.User {
 		Email:    u.Email.String,
 		Password: u.Password,
 		Phone:    u.Phone.String,
+		Nickname: u.Nickname,
 		Ctime:    time.UnixMilli(u.Ctime),
 	}
 }

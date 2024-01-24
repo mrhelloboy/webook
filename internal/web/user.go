@@ -294,7 +294,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 	ctx.String(http.StatusOK, "注册成功")
 }
 
-// Edit 修改用户信息
+// Edit 修改用户信息（手机、邮箱、密码的修改需要验证才能修改）
 func (u *UserHandler) Edit(ctx *gin.Context) {
 
 }
@@ -306,15 +306,26 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 
 // ProfileJWT 用户信息
 func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
-	c, _ := ctx.Get("claims")
-	claims, ok := c.(*UserClaims)
-	if !ok {
-		ctx.String(http.StatusOK, "系统错误")
+	type Profile struct {
+		Email    string
+		Phone    string
+		Nickname string
+	}
+	uc := ctx.MustGet("claims").(*UserClaims)
+	user, err := u.svc.Profile(ctx, uc.Uid)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 		return
 	}
-
-	fmt.Printf("-- claims uid: %v\n", claims.Uid)
-	ctx.String(http.StatusOK, "这是你的Profile JWT")
+	ctx.JSON(http.StatusOK, Result{
+		Data: Profile{
+			Email:    user.Email,
+			Phone:    user.Phone,
+			Nickname: user.Nickname,
+		},
+		Code: 2,
+		Msg:  "ok",
+	})
 }
 
 type UserClaims struct {

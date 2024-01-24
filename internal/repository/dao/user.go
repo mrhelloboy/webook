@@ -75,6 +75,7 @@ type User struct {
 	Email    sql.NullString `gorm:"unique"`
 	Password string
 	Phone    sql.NullString `gorm:"unique"`
-	Ctime    int64          // 创建时间，毫秒数
-	Utime    int64          // 更新时间，毫秒数
+	Nickname string
+	Ctime    int64 // 创建时间，毫秒数
+	Utime    int64 // 更新时间，毫秒数
 }
