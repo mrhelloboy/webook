@@ -55,8 +55,8 @@ func (r *CachedUserRepository) FindById(ctx context.Context, id int64) (domain.U
 	// 缓存里面有数据
 	// 缓存里面没有数据
 	// 缓存出错了，你也不知道有没有数据
-	if err != nil {
-		return domain.User{}, err
+	if err == nil {
+		return u, nil
 	}
 	// 没有数据
 	//if errors.Is(err, cache.ErrKeyNotExist) {
@@ -78,10 +78,14 @@ func (r *CachedUserRepository) FindById(ctx context.Context, id int64) (domain.U
 
 	u = r.entityToDomain(ue)
 
-	err = r.cache.Set(ctx, u)
-	if err != nil {
-		// 打日志，做监控
-	}
+	// 可以异步也可以同步
+	go func() {
+		_ = r.cache.Set(ctx, u)
+		//if err != nil {
+		//	// 打日志，做监控
+		//}
+	}()
+
 	return u, err
 
 	// 用缓存会面临的2个问题：
