@@ -55,9 +55,10 @@ func (dao *GORMUserDAO) Insert(ctx context.Context, u User) error {
 
 	// 下面代码存在强耦合问题，表明是与Mysql数据库相关的
 	// 如果切换成其他数据库，需要修改
+	//if mysqlError, ok := err.(*mysql.MySQLError); ok {
 	var mysqlError *mysql.MySQLError
 	if errors.As(err, &mysqlError) {
-		// 数据库中1062错误码通常表示“唯一性约束冲突”
+		// 数据库中 1062 错误码通常表示“唯一性约束冲突”
 		const uniqueConflictErrNo uint16 = 1062
 		if mysqlError.Number == uniqueConflictErrNo {
 			// 邮箱或者手机号码冲突
