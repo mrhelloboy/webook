@@ -287,6 +287,7 @@ func TestUserHandler_LoginSMS(t *testing.T) {
 
 			assert.Equal(t, tc.wantCode, resp.Code)
 			assert.Equal(t, tc.wantRespBody(), resp.Body.String())
+
 		})
 	}
 }

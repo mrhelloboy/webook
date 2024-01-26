@@ -114,7 +114,19 @@ func (u *UserHandler) SendLoginSmsCode(ctx *gin.Context) {
 	if err := ctx.Bind(&req); err != nil {
 		return
 	}
-	err := u.codeSvc.Send(ctx, biz, req.Phone)
+
+	// 验证手机号是否合法
+	ok, err := u.phoneExp.MatchString(req.Phone)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "手机号码不合法"})
+		return
+	}
+
+	err = u.codeSvc.Send(ctx, biz, req.Phone)
 	switch {
 	case err == nil:
 		ctx.JSON(http.StatusOK, Result{
