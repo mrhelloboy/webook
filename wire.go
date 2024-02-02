@@ -23,6 +23,7 @@ func InitWebServer() *gin.Engine {
 		web.NewUserHandler,
 		ioc.InitGin,
 		ioc.InitMiddleware,
+		ioc.InitRateLimiterOfMiddleware,
 	)
 	return new(gin.Engine)
 }

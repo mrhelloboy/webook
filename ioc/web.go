@@ -6,7 +6,7 @@ import (
 	"github.com/mrhelloboy/wehook/internal/web"
 	"github.com/mrhelloboy/wehook/internal/web/middleware"
 	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/ratelimit"
-	"github.com/redis/go-redis/v9"
+	ratelimit2 "github.com/mrhelloboy/wehook/pkg/ratelimit"
 	"strings"
 	"time"
 )
@@ -18,10 +18,10 @@ func InitGin(mws []gin.HandlerFunc, userhdr web.Handler) *gin.Engine {
 	return server
 }
 
-func InitMiddleware(redisClient redis.Cmdable) []gin.HandlerFunc {
+func InitMiddleware(limiter ratelimit2.Limiter) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		// 限流
-		rateLimitMiddleware(redisClient),
+		rateLimitMiddleware(limiter),
 		// 跨域
 		corsMiddleware(),
 		// JWT
@@ -29,8 +29,8 @@ func InitMiddleware(redisClient redis.Cmdable) []gin.HandlerFunc {
 	}
 }
 
-func rateLimitMiddleware(redisClient redis.Cmdable) gin.HandlerFunc {
-	return ratelimit.NewBuilder(redisClient, time.Second, 100).Build()
+func rateLimitMiddleware(limiter ratelimit2.Limiter) gin.HandlerFunc {
+	return ratelimit.NewBuilder(limiter).Build()
 }
 
 func corsMiddleware() gin.HandlerFunc {

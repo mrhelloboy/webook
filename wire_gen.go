@@ -20,7 +20,8 @@ import (
 
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	v := ioc.InitMiddleware(cmdable)
+	limiter := ioc.InitRateLimiterOfMiddleware(cmdable)
+	v := ioc.InitMiddleware(limiter)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
