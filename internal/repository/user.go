@@ -19,6 +19,7 @@ type UserRepository interface {
 	FindByPhone(ctx context.Context, phone string) (domain.User, error)
 	Create(ctx context.Context, u domain.User) error
 	FindById(ctx context.Context, id int64) (domain.User, error)
+	FindByWechat(ctx context.Context, openID string) (domain.User, error)
 }
 
 type CachedUserRepository struct {
@@ -96,14 +97,24 @@ func (r *CachedUserRepository) FindById(ctx context.Context, id int64) (domain.U
 	// 		3.（Redis + Redis）有一个高配置的Redis集群，还有一个廉价的低配Redis集群，高大上的蹦了，赶紧切换到低配的
 }
 
+func (r *CachedUserRepository) FindByWechat(ctx context.Context, openID string) (domain.User, error) {
+	user, err := r.dao.FindByWechat(ctx, openID)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return r.entityToDomain(user), nil
+}
+
 func (r *CachedUserRepository) domainToEntity(u domain.User) dao.User {
 	return dao.User{
-		Id:       u.Id,
-		Email:    sql.NullString{String: u.Email, Valid: u.Email != ""},
-		Password: u.Password,
-		Nickname: u.Nickname,
-		Phone:    sql.NullString{String: u.Phone, Valid: u.Phone != ""},
-		Ctime:    u.Ctime.UnixMilli(),
+		Id:            u.Id,
+		Email:         sql.NullString{String: u.Email, Valid: u.Email != ""},
+		Password:      u.Password,
+		Nickname:      u.Nickname,
+		Phone:         sql.NullString{String: u.Phone, Valid: u.Phone != ""},
+		WechatOpenId:  sql.NullString{String: u.WechatInfo.OpenID, Valid: u.WechatInfo.OpenID != ""},
+		WechatUnionId: sql.NullString{String: u.WechatInfo.UnionID, Valid: u.WechatInfo.UnionID != ""},
+		Ctime:         u.Ctime.UnixMilli(),
 	}
 }
 
@@ -114,6 +125,10 @@ func (r *CachedUserRepository) entityToDomain(u dao.User) domain.User {
 		Password: u.Password,
 		Phone:    u.Phone.String,
 		Nickname: u.Nickname,
-		Ctime:    time.UnixMilli(u.Ctime),
+		WechatInfo: domain.WechatInfo{
+			OpenID:  u.WechatOpenId.String,
+			UnionID: u.WechatUnionId.String,
+		},
+		Ctime: time.UnixMilli(u.Ctime),
 	}
 }

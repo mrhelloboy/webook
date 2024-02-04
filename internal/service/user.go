@@ -17,6 +17,7 @@ type UserService interface {
 	Login(ctx context.Context, email, password string) (domain.User, error)
 	Signup(ctx context.Context, u domain.User) error
 	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
+	FindOrCreateByWechat(ctx context.Context, info domain.WechatInfo) (domain.User, error)
 	Profile(ctx context.Context, id int64) (domain.User, error)
 }
 
@@ -79,6 +80,25 @@ func (svc *UserSvc) FindOrCreate(ctx context.Context, phone string) (domain.User
 
 	// todo: 这里有主从延迟的坑
 	return svc.repo.FindByPhone(ctx, phone)
+}
+
+func (svc *UserSvc) FindOrCreateByWechat(ctx context.Context, info domain.WechatInfo) (domain.User, error) {
+	// 快路径
+	u, err := svc.repo.FindByWechat(ctx, info.OpenID)
+	if !errors.Is(err, repository.ErrUserNotFound) {
+		// 业务中大多数请求时进入这个逻辑
+		// err 为 nil，会进入该逻辑，说明用户存在
+		return u, err
+	}
+
+	err = svc.repo.Create(ctx, domain.User{WechatInfo: info})
+	// 注册有问题，但是又不是用户手机号码冲突，说明系统异常
+	if err != nil && !errors.Is(err, repository.ErrUserDuplicate) {
+		return domain.User{}, err
+	}
+
+	// todo: 这里有主从延迟的坑
+	return svc.repo.FindByWechat(ctx, info.UnionID)
 }
 
 func (svc *UserSvc) Profile(ctx context.Context, id int64) (domain.User, error) {

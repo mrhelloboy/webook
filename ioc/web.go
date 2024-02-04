@@ -11,10 +11,11 @@ import (
 	"time"
 )
 
-func InitGin(mws []gin.HandlerFunc, userhdr web.Handler) *gin.Engine {
+func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler, oauth2WechatHdl *web.OAuth2WechatHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mws...)
 	userhdr.RegisterRouters(server)
+	oauth2WechatHdl.RegisterRouters(server)
 	return server
 }
 
@@ -57,5 +58,7 @@ func jwtMiddleware() gin.HandlerFunc {
 		IgnorePath("/user/loginJWT").
 		IgnorePath("/user/login_sms").
 		IgnorePath("/user/login_sms/code/send").
+		IgnorePath("/oauth2/wechat/authurl").
+		IgnorePath("/oauth2/wechat/callback").
 		Build()
 }

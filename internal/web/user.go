@@ -2,15 +2,12 @@ package web
 
 import (
 	"errors"
-	"fmt"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt/v5"
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"net/http"
-	"time"
 )
 
 const biz = "login"
@@ -24,9 +21,10 @@ type UserHandler struct {
 	phoneExp    *regexp.Regexp
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
+	JWTHandler
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) Handler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
@@ -208,27 +206,6 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	return
 }
 
-func (u *UserHandler) setJWTToken(ctx *gin.Context, uid int64) error {
-	// 生成一个 JWT token
-	claims := UserClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
-		},
-		Uid:       uid,
-		UserAgent: ctx.Request.UserAgent(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	tokenStr, err := token.SignedString([]byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"))
-	if err != nil {
-		return err
-	}
-
-	ctx.Header("x-jwt-token", tokenStr)
-
-	fmt.Printf("-- token: %s\n", tokenStr)
-	return nil
-}
-
 // Logout 退出登录, 清除用户登录状态所保存的相关信息
 func (u *UserHandler) Logout(ctx *gin.Context) {
 	sess := sessions.Default(ctx)
@@ -338,10 +315,4 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		Code: 2,
 		Msg:  "ok",
 	})
-}
-
-type UserClaims struct {
-	jwt.RegisteredClaims
-	Uid       int64
-	UserAgent string
 }
