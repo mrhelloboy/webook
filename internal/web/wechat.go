@@ -21,9 +21,10 @@ type OAuth2WechatHandler struct {
 
 func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService) *OAuth2WechatHandler {
 	return &OAuth2WechatHandler{
-		svc:      svc,
-		userSvc:  userSvc,
-		stateKey: []byte("Xorxo9JJUq0voPbqVbrRjTiJXTCGORkW"),
+		svc:        svc,
+		userSvc:    userSvc,
+		stateKey:   []byte("Xorxo9JJUq0voPbqVbrRjTiJXTCGORkW"),
+		JWTHandler: newJWTHandler(),
 	}
 }
 
@@ -101,6 +102,14 @@ func (h *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 		})
 	}
 	err = h.setJWTToken(ctx, user.Id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "系统错误",
+		})
+	}
+
+	err = h.setRefreshToken(ctx, user.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,

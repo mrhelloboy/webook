@@ -5,6 +5,7 @@ import (
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"net/http"
@@ -39,6 +40,7 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		phoneExp:    phoneExp,
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
+		JWTHandler:  newJWTHandler(),
 	}
 }
 
@@ -54,6 +56,31 @@ func (u *UserHandler) RegisterRouters(server *gin.Engine) {
 
 	ug.POST("/login_sms/code/send", u.SendLoginSmsCode)
 	ug.POST("/login_sms", u.LoginSMS)
+	ug.POST("/refresh_token", u.RefreshToken)
+}
+
+// RefreshToken 用于刷新 JWT token
+// 为了安全性，可以同时刷新长短 token，用 Redis 来记录是否有效，即 refresh_token 是一次性的。
+// 及参考登录校验中，比较 User-Agent 来增强安全性。
+func (u *UserHandler) RefreshToken(ctx *gin.Context) {
+	// 从这个接口获取的 token 是 refresh_token
+	refreshToken := ExtractToken(ctx)
+	var rc RefreshClaims
+	token, err := jwt.ParseWithClaims(refreshToken, &rc, func(token *jwt.Token) (interface{}, error) {
+		return u.rtKey, nil
+	})
+	if err != nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	// 设置新的 JWT token
+	err = u.setJWTToken(ctx, rc.Uid)
+	if err != nil {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Msg: "ok"})
 }
 
 func (u *UserHandler) LoginSMS(ctx *gin.Context) {
@@ -95,6 +122,12 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 	}
 
 	err = u.setJWTToken(ctx, user.Id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+
+	err = u.setRefreshToken(ctx, user.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 		return
@@ -198,6 +231,11 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 
 	// 用 JWT 设置登录态
 	if err := u.setJWTToken(ctx, user.Id); err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+
+	if err := u.setRefreshToken(ctx, user.Id); err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 		return
 	}

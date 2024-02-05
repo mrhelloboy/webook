@@ -6,8 +6,6 @@ import (
 	"github.com/mrhelloboy/wehook/internal/web"
 	"log"
 	"net/http"
-	"strings"
-	"time"
 )
 
 /**
@@ -39,32 +37,9 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			}
 		}
 
-		// 使用 jwt 校验
-		tokenHeader := ctx.GetHeader("Authorization")
-		if tokenHeader == "" {
-			// 没登录
-			log.Printf("== tokenHeader: %s", tokenHeader)
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		// 从 tokenHeader 中获取 token
-		segs := strings.Split(tokenHeader, " ")
-		if len(segs) != 2 {
-			// 格式错误 -> 可能有人在搞事
-			log.Printf("== segs: %v", segs)
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-		if segs[0] != "Bearer" || segs[1] == "" {
-			// 格式错误 -> 可能有人在搞事
-			log.Printf("== segs[0] != Bearer or segs[1] == '': %v", segs)
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
+		tokenStr := web.ExtractToken(ctx)
 		claims := &web.UserClaims{}
-		token, err := jwt.ParseWithClaims(segs[1], claims, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"), nil
 		})
 
@@ -92,18 +67,18 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 
 		// jwt token 续约 -> 比较恶心
 		// 每 1 分钟续约一次
-		now := time.Now()
-		if claims.ExpiresAt.Sub(now) < (time.Duration(23*60+59) * time.Minute) {
-			log.Println("jwt 续约")
-			claims.ExpiresAt = jwt.NewNumericDate(now.Add(time.Hour * 24 * 60))
-			tokenStr, err := token.SignedString([]byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"))
-			if err != nil {
-				// log
-				log.Println("jwt 续约失败：", err)
-			}
-
-			ctx.Header("x-jwt-token", tokenStr)
-		}
+		//now := time.Now()
+		//if claims.ExpiresAt.Sub(now) < (time.Duration(23*60+59) * time.Minute) {
+		//	log.Println("jwt 续约")
+		//	claims.ExpiresAt = jwt.NewNumericDate(now.Add(time.Hour * 24 * 60))
+		//	tokenStr, err := token.SignedString([]byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"))
+		//	if err != nil {
+		//		// log
+		//		log.Println("jwt 续约失败：", err)
+		//	}
+		//
+		//	ctx.Header("x-jwt-token", tokenStr)
+		//}
 
 		ctx.Set("claims", claims)
 	}

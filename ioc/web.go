@@ -39,7 +39,7 @@ func corsMiddleware() gin.HandlerFunc {
 		AllowHeaders: []string{"Content-Type", "Authorization"},
 		// 允许跨域使用的 header，否则前端无法读取 x-jwt-token
 		// 前端读取 x-jwt-token 的值来配置 Authorization 头
-		ExposeHeaders:    []string{"x-jwt-token"},
+		ExposeHeaders:    []string{"x-jwt-token", "x-refresh-token"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
 			// 开发环境允许跨域
@@ -58,6 +58,7 @@ func jwtMiddleware() gin.HandlerFunc {
 		IgnorePath("/user/loginJWT").
 		IgnorePath("/user/login_sms").
 		IgnorePath("/user/login_sms/code/send").
+		IgnorePath("/user/refresh_token").
 		IgnorePath("/oauth2/wechat/authurl").
 		IgnorePath("/oauth2/wechat/callback").
 		Build()
