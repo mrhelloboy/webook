@@ -13,6 +13,7 @@ import (
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/web"
+	"github.com/mrhelloboy/wehook/internal/web/jwt"
 	"github.com/mrhelloboy/wehook/ioc"
 )
 
@@ -21,7 +22,8 @@ import (
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
 	limiter := ioc.InitRateLimiterOfMiddleware(cmdable)
-	v := ioc.InitMiddleware(limiter)
+	handler := jwt.NewRedisJWTHandler(cmdable)
+	v := ioc.InitMiddleware(limiter, handler)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
@@ -31,9 +33,9 @@ func InitWebServer() *gin.Engine {
 	codeRepository := repository.NewCachedCodeRepository(codeCache)
 	smsService := ioc.InitSMSService()
 	codeService := service.NewCodeSvc(codeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, codeService)
+	userHandler := web.NewUserHandler(userService, codeService, cmdable, handler)
 	wechatService := ioc.InitOAuth2WechatService()
-	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService)
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
 	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler)
 	return engine
 }

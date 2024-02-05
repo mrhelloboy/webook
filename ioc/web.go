@@ -4,6 +4,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/web"
+	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 	"github.com/mrhelloboy/wehook/internal/web/middleware"
 	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/ratelimit"
 	ratelimit2 "github.com/mrhelloboy/wehook/pkg/ratelimit"
@@ -19,14 +20,14 @@ func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler, oauth2WechatHdl *w
 	return server
 }
 
-func InitMiddleware(limiter ratelimit2.Limiter) []gin.HandlerFunc {
+func InitMiddleware(limiter ratelimit2.Limiter, jwtHdl myjwt.Handler) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		// 限流
 		rateLimitMiddleware(limiter),
 		// 跨域
 		corsMiddleware(),
 		// JWT
-		jwtMiddleware(),
+		jwtMiddleware(jwtHdl),
 	}
 }
 
@@ -52,8 +53,8 @@ func corsMiddleware() gin.HandlerFunc {
 	})
 }
 
-func jwtMiddleware() gin.HandlerFunc {
-	return middleware.NewLoginJWTMiddlewareBuilder().
+func jwtMiddleware(jwtHdl myjwt.Handler) gin.HandlerFunc {
+	return middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).
 		IgnorePath("/user/signup").
 		IgnorePath("/user/loginJWT").
 		IgnorePath("/user/login_sms").

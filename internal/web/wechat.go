@@ -8,6 +8,7 @@ import (
 	uuid "github.com/lithammer/shortuuid/v4"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/service/oauth2/wechat"
+	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 	"net/http"
 	"time"
 )
@@ -15,16 +16,16 @@ import (
 type OAuth2WechatHandler struct {
 	svc     wechat.Service
 	userSvc service.UserService
-	JWTHandler
+	myjwt.Handler
 	stateKey []byte
 }
 
-func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService) *OAuth2WechatHandler {
+func NewOAuth2WechatHandler(svc wechat.Service, userSvc service.UserService, jwtHandler myjwt.Handler) *OAuth2WechatHandler {
 	return &OAuth2WechatHandler{
-		svc:        svc,
-		userSvc:    userSvc,
-		stateKey:   []byte("Xorxo9JJUq0voPbqVbrRjTiJXTCGORkW"),
-		JWTHandler: newJWTHandler(),
+		svc:      svc,
+		userSvc:  userSvc,
+		stateKey: []byte("Xorxo9JJUq0voPbqVbrRjTiJXTCGORkW"),
+		Handler:  jwtHandler,
 	}
 }
 
@@ -101,15 +102,7 @@ func (h *OAuth2WechatHandler) Callback(ctx *gin.Context) {
 			Msg:  "系统错误",
 		})
 	}
-	err = h.setJWTToken(ctx, user.Id)
-	if err != nil {
-		ctx.JSON(http.StatusOK, Result{
-			Code: 5,
-			Msg:  "系统错误",
-		})
-	}
-
-	err = h.setRefreshToken(ctx, user.Id)
+	err = h.SetLoginToken(ctx, user.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,

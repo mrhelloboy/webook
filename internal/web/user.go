@@ -8,6 +8,8 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/service"
+	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
+	"github.com/redis/go-redis/v9"
 	"net/http"
 )
 
@@ -22,10 +24,11 @@ type UserHandler struct {
 	phoneExp    *regexp.Regexp
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
-	JWTHandler
+	cmd         redis.Cmdable
+	myjwt.Handler
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, cmd redis.Cmdable, jwtHandler myjwt.Handler) *UserHandler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
@@ -40,7 +43,8 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		phoneExp:    phoneExp,
 		emailExp:    emailExp,
 		passwordExp: passwordExp,
-		JWTHandler:  newJWTHandler(),
+		cmd:         cmd,
+		Handler:     jwtHandler,
 	}
 }
 
@@ -49,6 +53,7 @@ func (u *UserHandler) RegisterRouters(server *gin.Engine) {
 	ug.POST("/login", u.Login)
 	ug.POST("/loginJWT", u.LoginJWT)
 	ug.POST("/logout", u.Logout)
+	ug.POST("/logoutJWT", u.LogoutJWT)
 	ug.POST("/signup", u.SignUp)
 	ug.POST("/edit", u.Edit)
 	ug.GET("/profile", u.Profile)
@@ -64,18 +69,25 @@ func (u *UserHandler) RegisterRouters(server *gin.Engine) {
 // 及参考登录校验中，比较 User-Agent 来增强安全性。
 func (u *UserHandler) RefreshToken(ctx *gin.Context) {
 	// 从这个接口获取的 token 是 refresh_token
-	refreshToken := ExtractToken(ctx)
-	var rc RefreshClaims
+	refreshToken := u.ExtractToken(ctx)
+	var rc myjwt.RefreshClaims
 	token, err := jwt.ParseWithClaims(refreshToken, &rc, func(token *jwt.Token) (interface{}, error) {
-		return u.rtKey, nil
+		return myjwt.RtKey, nil
 	})
 	if err != nil || !token.Valid {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
 	}
 
+	err = u.CheckSession(ctx, rc.Ssid)
+	if err != nil {
+		// Redis 出问题或者用户已经退出登录
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
 	// 设置新的 JWT token
-	err = u.setJWTToken(ctx, rc.Uid)
+	err = u.SetJWTToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -121,13 +133,7 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 		return
 	}
 
-	err = u.setJWTToken(ctx, user.Id)
-	if err != nil {
-		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		return
-	}
-
-	err = u.setRefreshToken(ctx, user.Id)
+	err = u.SetLoginToken(ctx, user.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 		return
@@ -230,12 +236,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 	}
 
 	// 用 JWT 设置登录态
-	if err := u.setJWTToken(ctx, user.Id); err != nil {
-		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
-		return
-	}
-
-	if err := u.setRefreshToken(ctx, user.Id); err != nil {
+	if err := u.SetLoginToken(ctx, user.Id); err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 		return
 	}
@@ -246,6 +247,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 
 // Logout 退出登录, 清除用户登录状态所保存的相关信息
 func (u *UserHandler) Logout(ctx *gin.Context) {
+	// session 处理方案
 	sess := sessions.Default(ctx)
 	sess.Options(sessions.Options{
 		//Secure: true,
@@ -256,6 +258,15 @@ func (u *UserHandler) Logout(ctx *gin.Context) {
 	_ = sess.Save()
 	ctx.String(http.StatusOK, "退出成功")
 	return
+}
+
+func (u *UserHandler) LogoutJWT(ctx *gin.Context) {
+	err := u.ClearToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "退出登录失败"})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Msg: "退出成功"})
 }
 
 // SignUp 注册用户
@@ -338,7 +349,7 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		Phone    string
 		Nickname string
 	}
-	uc := ctx.MustGet("claims").(*UserClaims)
+	uc := ctx.MustGet("claims").(*myjwt.UserClaims)
 	user, err := u.svc.Profile(ctx, uc.Uid)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})

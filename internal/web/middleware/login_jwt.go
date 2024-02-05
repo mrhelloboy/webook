@@ -3,7 +3,7 @@ package middleware
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/mrhelloboy/wehook/internal/web"
+	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 	"log"
 	"net/http"
 )
@@ -15,10 +15,13 @@ import (
 
 type LoginJWTMiddlewareBuilder struct {
 	paths []string
+	myjwt.Handler
 }
 
-func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {
-	return &LoginJWTMiddlewareBuilder{}
+func NewLoginJWTMiddlewareBuilder(jwtHandler myjwt.Handler) *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{
+		Handler: jwtHandler,
+	}
 }
 
 // IgnorePath 忽略路径 -> 链式调用
@@ -37,8 +40,8 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			}
 		}
 
-		tokenStr := web.ExtractToken(ctx)
-		claims := &web.UserClaims{}
+		tokenStr := l.ExtractToken(ctx)
+		claims := &myjwt.UserClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"), nil
 		})
@@ -61,6 +64,13 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			// 有安全问题
 			// todo: 写入监控
 			log.Printf("claims.UserAgent (%s) != ctx.Request.UserAgent() %s\n", claims.UserAgent, ctx.Request.UserAgent())
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		err = l.CheckSession(ctx, claims.Ssid)
+		if err != nil {
+			// Redis 出问题或者用户已经退出登录
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}

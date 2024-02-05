@@ -10,6 +10,7 @@ import (
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/web"
+	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 	"github.com/mrhelloboy/wehook/ioc"
 )
 
@@ -24,6 +25,7 @@ func InitWebServer() *gin.Engine {
 		web.NewUserHandler,
 		web.NewOAuth2WechatHandler,
 		ioc.InitGin,
+		myjwt.NewRedisJWTHandler,
 		ioc.InitMiddleware,
 		ioc.InitRateLimiterOfMiddleware,
 	)
