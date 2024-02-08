@@ -1,11 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
+	_ "github.com/spf13/viper/remote"
 )
 
 func main() {
+	//initViperRemote()
 	initViper()
 	server := InitWebServer()
 	if err := server.Run(":8080"); err != nil {
@@ -34,7 +38,38 @@ func initViper() {
 	cfgFile := pflag.String("config", "config/config.yaml", "配置文件路径")
 	pflag.Parse()
 	viper.SetConfigFile(*cfgFile)
+
+	// 监听配置文件变更
+	viper.WatchConfig()
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		fmt.Println(e.Name, e.Op)
+	})
+
 	err := viper.ReadInConfig()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func initViperRemote() {
+	viper.SetConfigType("yaml")
+	err := viper.AddRemoteProvider("etcd3", "http://127.0.0.1:12379", "/webook")
+	if err != nil {
+		panic(err)
+	}
+
+	// 监听配置文件变更
+	err = viper.WatchRemoteConfig()
+	if err != nil {
+		panic(err)
+	}
+
+	// 该接口在远程配置变更是无效的
+	//viper.OnConfigChange(func(e fsnotify.Event) {
+	//	fmt.Println(e.Name, e.Op)
+	//})
+
+	err = viper.ReadRemoteConfig()
 	if err != nil {
 		panic(err)
 	}
