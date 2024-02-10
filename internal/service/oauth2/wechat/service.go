@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mrhelloboy/wehook/internal/domain"
+	"go.uber.org/zap"
 	"net/http"
 	"net/url"
 )
@@ -49,6 +50,8 @@ func (s *svc) VerifyCode(ctx context.Context, code string) (domain.WechatInfo, e
 	if res.ErrCode != 0 {
 		return domain.WechatInfo{}, fmt.Errorf("微信返回错误信息，errcode: %d, errmsg: %s", res.ErrCode, res.ErrMsg)
 	}
+
+	zap.L().Info("调用微信，拿到用户信息", zap.String("unionID", res.UnionId), zap.String("openID", res.OpenId))
 	return domain.WechatInfo{
 		OpenID:  res.OpenId,
 		UnionID: res.UnionId,

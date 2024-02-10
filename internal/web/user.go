@@ -10,6 +10,7 @@ import (
 	"github.com/mrhelloboy/wehook/internal/service"
 	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -90,6 +91,7 @@ func (u *UserHandler) RefreshToken(ctx *gin.Context) {
 	err = u.SetJWTToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
+		zap.L().Error("设置 JWT token 失败", zap.Error(err))
 		return
 	}
 	ctx.JSON(http.StatusOK, Result{Msg: "ok"})
@@ -119,6 +121,7 @@ func (u *UserHandler) LoginSMS(ctx *gin.Context) {
 	ok, err = u.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		zap.L().Error("校验验证码出错", zap.Error(err))
 		return
 	}
 	if !ok {
