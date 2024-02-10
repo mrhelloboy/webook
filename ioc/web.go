@@ -1,12 +1,15 @@
 package ioc
 
 import (
+	"context"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/web"
 	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 	"github.com/mrhelloboy/wehook/internal/web/middleware"
+	loggermw "github.com/mrhelloboy/wehook/pkg/ginx/middlewares/logger"
 	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/ratelimit"
+	"github.com/mrhelloboy/wehook/pkg/logger"
 	ratelimit2 "github.com/mrhelloboy/wehook/pkg/ratelimit"
 	"strings"
 	"time"
@@ -20,8 +23,10 @@ func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler, oauth2WechatHdl *w
 	return server
 }
 
-func InitMiddleware(limiter ratelimit2.Limiter, jwtHdl myjwt.Handler) []gin.HandlerFunc {
+func InitMiddleware(limiter ratelimit2.Limiter, jwtHdl myjwt.Handler, logger logger.Logger) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
+		// 日志
+		loggerMiddleware(logger),
 		// 限流
 		rateLimitMiddleware(limiter),
 		// 跨域
@@ -29,6 +34,12 @@ func InitMiddleware(limiter ratelimit2.Limiter, jwtHdl myjwt.Handler) []gin.Hand
 		// JWT
 		jwtMiddleware(jwtHdl),
 	}
+}
+
+func loggerMiddleware(l logger.Logger) gin.HandlerFunc {
+	return loggermw.NewBuilder(func(ctx context.Context, al *loggermw.AccessLog) {
+		l.Debug("HTTP请求", logger.Field{Key: "al", Value: al})
+	}).AllowReqBody().AllowRespBody().Build()
 }
 
 func rateLimitMiddleware(limiter ratelimit2.Limiter) gin.HandlerFunc {
