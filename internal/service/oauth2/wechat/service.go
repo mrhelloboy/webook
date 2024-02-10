@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/mrhelloboy/wehook/internal/domain"
-	"go.uber.org/zap"
+	"github.com/mrhelloboy/wehook/pkg/logger"
 	"net/http"
 	"net/url"
 )
@@ -20,12 +20,14 @@ type Service interface {
 type svc struct {
 	appId     string
 	appSecret string
+	logger    logger.Logger
 }
 
-func NewService(appId string, appSecret string) Service {
+func NewService(appId string, appSecret string, logger logger.Logger) Service {
 	return &svc{
 		appId:     appId,
 		appSecret: appSecret,
+		logger:    logger,
 	}
 }
 
@@ -51,7 +53,7 @@ func (s *svc) VerifyCode(ctx context.Context, code string) (domain.WechatInfo, e
 		return domain.WechatInfo{}, fmt.Errorf("微信返回错误信息，errcode: %d, errmsg: %s", res.ErrCode, res.ErrMsg)
 	}
 
-	zap.L().Info("调用微信，拿到用户信息", zap.String("unionID", res.UnionId), zap.String("openID", res.OpenId))
+	s.logger.Info("调用微信，拿到用户信息", logger.String("unionID", res.UnionId), logger.String("openID", res.OpenId))
 	return domain.WechatInfo{
 		OpenID:  res.OpenId,
 		UnionID: res.UnionId,

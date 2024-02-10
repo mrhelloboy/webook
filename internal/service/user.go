@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/repository"
+	"github.com/mrhelloboy/wehook/pkg/logger"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -22,12 +23,14 @@ type UserService interface {
 }
 
 type UserSvc struct {
-	repo repository.UserRepository
+	repo   repository.UserRepository
+	logger logger.Logger
 }
 
-func NewUserSvc(repo repository.UserRepository) UserService {
+func NewUserSvc(repo repository.UserRepository, logger logger.Logger) UserService {
 	return &UserSvc{
-		repo: repo,
+		repo:   repo,
+		logger: logger,
 	}
 }
 
