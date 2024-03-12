@@ -7,3 +7,10 @@ func String(key string, val any) Field {
 		Value: val,
 	}
 }
+
+func Error(err error) Field {
+	return Field{
+		Key:   "error",
+		Value: err,
+	}
+}

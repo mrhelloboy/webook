@@ -18,11 +18,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler, oauth2WechatHdl *web.OAuth2WechatHandler) *gin.Engine {
+func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler, oauth2WechatHdl *web.OAuth2WechatHandler, articleHdl *web.ArticleHandler) *gin.Engine {
 	server := gin.Default()
 	server.Use(mws...)
 	userhdr.RegisterRouters(server)
 	oauth2WechatHdl.RegisterRouters(server)
+	articleHdl.RegisterRouters(server)
 	return server
 }
 

@@ -4,18 +4,20 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/mrhelloboy/wehook/internal/web"
-	"github.com/mrhelloboy/wehook/ioc"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/mrhelloboy/wehook/internal/integration/startup"
+	"github.com/mrhelloboy/wehook/internal/web"
+	"github.com/mrhelloboy/wehook/ioc"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestUserHandler_e2e_SendLoginSmsCode(t *testing.T) {
-	server := InitWebServer()
+	server := startup.InitWebServer()
 	rdb := ioc.InitRedis()
 	testCases := []struct {
 		name string
@@ -30,7 +32,6 @@ func TestUserHandler_e2e_SendLoginSmsCode(t *testing.T) {
 		{
 			name: "发送成功",
 			before: func(t *testing.T) {
-
 			},
 			after: func(t *testing.T) {
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
@@ -90,10 +91,8 @@ func TestUserHandler_e2e_SendLoginSmsCode(t *testing.T) {
 		{
 			name: "手机号码为空",
 			before: func(t *testing.T) {
-
 			},
 			after: func(t *testing.T) {
-
 			},
 			reqBody:      `{"phone":""}`,
 			wantCode:     200,
