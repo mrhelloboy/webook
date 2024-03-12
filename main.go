@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -11,7 +12,7 @@ import (
 
 func main() {
 	initLogger()
-	//initViperRemote()
+	// initViperRemote()
 	initViper()
 	server := InitWebServer()
 	if err := server.Run(":8080"); err != nil {
@@ -36,7 +37,7 @@ func initViperV1() {
 	// 当前工作目录下的 config 子目录
 	// 配置文件的路径，可以有多个，当多个的时候，会按照顺序依次查找
 	viper.AddConfigPath("./config")
-	//viper.AddConfigPath("/etc/webook")
+	// viper.AddConfigPath("/etc/webook")
 	// 读取配置到 viper 里面去，或者可以理解为加载到内存里面
 	err := viper.ReadInConfig()
 	if err != nil {
