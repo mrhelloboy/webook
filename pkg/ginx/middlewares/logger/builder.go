@@ -3,32 +3,40 @@ package logger
 import (
 	"bytes"
 	"context"
-	"github.com/gin-gonic/gin"
 	"io"
 	"time"
+
+	"go.uber.org/atomic"
+
+	"github.com/gin-gonic/gin"
 )
 
-// 将每次请求及响应信息都记录到日志中
-
+// Builder 将每次请求及响应信息都记录到日志中
+// 注意：
+// 1. 小心日志内容过多。URL 可能很长，请求体，响应体都可能很大，需要考虑是否完全输出到日志里面的问题
+// 2. 用户可能更换不同的日志框架，所以需要足够的灵活性
+// 3. 考虑动态开关，结合监听配置文件，及小心并发安全
 type Builder struct {
-	allowReqBody  bool
-	allowRespBody bool
+	allowReqBody  *atomic.Bool
+	allowRespBody *atomic.Bool
 	loggerFunc    func(ctx context.Context, al *AccessLog)
 }
 
 func NewBuilder(fn func(ctx context.Context, al *AccessLog)) *Builder {
 	return &Builder{
-		loggerFunc: fn,
+		loggerFunc:    fn,
+		allowReqBody:  atomic.NewBool(false),
+		allowRespBody: atomic.NewBool(false),
 	}
 }
 
-func (b *Builder) AllowReqBody() *Builder {
-	b.allowReqBody = true
+func (b *Builder) AllowReqBody(val bool) *Builder {
+	b.allowReqBody.Store(val)
 	return b
 }
 
-func (b *Builder) AllowRespBody() *Builder {
-	b.allowRespBody = true
+func (b *Builder) AllowRespBody(val bool) *Builder {
+	b.allowRespBody.Store(val)
 	return b
 }
 
@@ -43,7 +51,7 @@ func (b *Builder) Build() gin.HandlerFunc {
 			Method: ctx.Request.Method,
 			Path:   url,
 		}
-		if b.allowReqBody && ctx.Request.Body != nil {
+		if b.allowReqBody.Load() && ctx.Request.Body != nil {
 			body, _ := ctx.GetRawData() // io.ReadAll(ctx.Request.Body)
 			// 因为 ctx.Request.Body 是一个流，io.ReadAll 会将其读取完毕，所以需要放回去
 			ctx.Request.Body = io.NopCloser(bytes.NewReader(body))
@@ -54,7 +62,7 @@ func (b *Builder) Build() gin.HandlerFunc {
 			al.ReqBody = string(body)
 		}
 
-		if b.allowRespBody && ctx.Writer != nil {
+		if b.allowRespBody.Load() && ctx.Writer != nil {
 			w := &responseWriter{
 				al:             al,
 				ResponseWriter: ctx.Writer,
@@ -68,7 +76,6 @@ func (b *Builder) Build() gin.HandlerFunc {
 		}()
 
 		ctx.Next()
-
 	}
 }
 

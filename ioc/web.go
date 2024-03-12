@@ -2,6 +2,10 @@ package ioc
 
 import (
 	"context"
+	"strings"
+	"time"
+
+	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/web"
@@ -11,8 +15,7 @@ import (
 	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/ratelimit"
 	"github.com/mrhelloboy/wehook/pkg/logger"
 	ratelimit2 "github.com/mrhelloboy/wehook/pkg/ratelimit"
-	"strings"
-	"time"
+	"github.com/spf13/viper"
 )
 
 func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler, oauth2WechatHdl *web.OAuth2WechatHandler) *gin.Engine {
@@ -37,9 +40,21 @@ func InitMiddleware(limiter ratelimit2.Limiter, jwtHdl myjwt.Handler, logger log
 }
 
 func loggerMiddleware(l logger.Logger) gin.HandlerFunc {
-	return loggermw.NewBuilder(func(ctx context.Context, al *loggermw.AccessLog) {
+	bd := loggermw.NewBuilder(func(ctx context.Context, al *loggermw.AccessLog) {
 		l.Debug("HTTP请求", logger.Field{Key: "al", Value: al})
-	}).AllowReqBody().AllowRespBody().Build()
+	}).AllowReqBody(true).AllowRespBody(true)
+
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		ok := viper.GetBool("web.logreq")
+		bd.AllowReqBody(ok)
+	})
+
+	viper.OnConfigChange(func(in fsnotify.Event) {
+		ok := viper.GetBool("web.logresp")
+		bd.AllowRespBody(ok)
+	})
+
+	return bd.Build()
 }
 
 func rateLimitMiddleware(limiter ratelimit2.Limiter) gin.HandlerFunc {
