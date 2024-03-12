@@ -38,7 +38,7 @@ func InitDB(l logger.Logger) *gorm.DB {
 		Logger: glogger.New(gormLoggerFunc(l.Debug), glogger.Config{
 			SlowThreshold:             time.Millisecond * 10,
 			IgnoreRecordNotFoundError: true,
-			ParameterizedQueries:      false,
+			ParameterizedQueries:      true,
 			LogLevel:                  glogger.Info,
 		}),
 	})
