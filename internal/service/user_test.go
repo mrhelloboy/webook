@@ -3,14 +3,15 @@ package service
 import (
 	"context"
 	"errors"
+	"testing"
+	"time"
+
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/repository"
 	repomocks "github.com/mrhelloboy/wehook/internal/repository/mocks"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 	"golang.org/x/crypto/bcrypt"
-	"testing"
-	"time"
 )
 
 func TestUserSvc_Login(t *testing.T) {
@@ -105,7 +106,7 @@ func TestUserSvc_Login(t *testing.T) {
 			ctl := gomock.NewController(t)
 			defer ctl.Finish()
 
-			userSvc := NewUserSvc(tc.mock(ctl))
+			userSvc := NewUserSvc(tc.mock(ctl), nil)
 			user, err := userSvc.Login(tc.ctx, tc.email, tc.password)
 
 			assert.Equal(t, tc.wantErr, err)

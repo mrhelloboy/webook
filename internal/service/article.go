@@ -2,26 +2,73 @@ package service
 
 import (
 	"context"
-
-	"github.com/mrhelloboy/wehook/internal/repository"
+	"time"
 
 	"github.com/mrhelloboy/wehook/internal/domain"
+	"github.com/mrhelloboy/wehook/internal/repository/article"
+	"github.com/mrhelloboy/wehook/pkg/logger"
 )
 
 type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
+	Publish(ctx context.Context, art domain.Article) (int64, error)
 }
 
 type articleSvc struct {
-	repo repository.ArticleRepository
+	authorRepo article.AuthorRepository
+	readerRepo article.ReaderRepository
+	l          logger.Logger
 }
 
-func NewArticleSvc(repo repository.ArticleRepository) ArticleService {
+func NewArticleSvc(authorRepo article.AuthorRepository, readerRepo article.ReaderRepository, l logger.Logger) ArticleService {
 	return &articleSvc{
-		repo: repo,
+		authorRepo: authorRepo,
+		readerRepo: readerRepo,
+		l:          l,
 	}
 }
 
+// Publish 发布到线上库
+// 1. 用户之前没发表过帖子，在制作库上没有记录，写完帖子直接发布
+// 2. 用户之前发表过帖子，在制作库上有记录，编辑帖子再发布（更新帖子，再发布）
+func (a *articleSvc) Publish(ctx context.Context, art domain.Article) (int64, error) {
+	id := art.Id
+	var err error
+
+	// 更新或者创建制作库
+	if art.Id > 0 {
+		err = a.authorRepo.Update(ctx, art)
+	} else {
+		id, err = a.authorRepo.Create(ctx, art)
+	}
+	if err != nil {
+		return 0, err
+	}
+
+	art.Id = id
+	// 同步到线上库 - 重试
+	for i := 0; i < 3; i++ {
+		time.Sleep(time.Second * time.Duration(i))
+		id, err = a.readerRepo.Save(ctx, art)
+		if err == nil {
+			break
+		}
+		// 同步线上库失败
+		a.l.Error("部分失败，保存到线上库失败", logger.Int64("art_id", art.Id), logger.Error(err))
+	}
+	if err != nil {
+		a.l.Error("全部失败，重试彻底失败", logger.Int64("art_id", art.Id), logger.Error(err))
+		// todo: 添加告警系统
+		// todo: 或者走异步，走 Canal， MQ
+	}
+	return id, err
+}
+
+// Save 保存到制作库
 func (a *articleSvc) Save(ctx context.Context, art domain.Article) (int64, error) {
-	return a.repo.Create(ctx, art)
+	if art.Id > 0 {
+		err := a.authorRepo.Update(ctx, art)
+		return art.Id, err
+	}
+	return a.authorRepo.Create(ctx, art)
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/mrhelloboy/wehook/internal/repository"
+	"github.com/mrhelloboy/wehook/internal/repository/article"
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
 	"github.com/mrhelloboy/wehook/internal/service"
@@ -39,8 +40,9 @@ func InitWebServer() *gin.Engine {
 	wechatService := InitPhantomWechatService(logger)
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
 	articleDAO := dao.NewGormArticleDAO(gormDB)
-	articleRepository := repository.NewCachedArticleRepo(articleDAO)
-	articleService := service.NewArticleSvc(articleRepository)
+	authorRepository := article.NewCachedAuthorRepo(articleDAO)
+	readerRepository := article.NewCachedReaderRepo()
+	articleService := service.NewArticleSvc(authorRepository, readerRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger)
 	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine
@@ -49,9 +51,10 @@ func InitWebServer() *gin.Engine {
 func InitArticleHandler() *web.ArticleHandler {
 	gormDB := InitTestDB()
 	articleDAO := dao.NewGormArticleDAO(gormDB)
-	articleRepository := repository.NewCachedArticleRepo(articleDAO)
-	articleService := service.NewArticleSvc(articleRepository)
+	authorRepository := article.NewCachedAuthorRepo(articleDAO)
+	readerRepository := article.NewCachedReaderRepo()
 	logger := InitLog()
+	articleService := service.NewArticleSvc(authorRepository, readerRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger)
 	return articleHandler
 }
@@ -79,5 +82,5 @@ var (
 	thirdProvider   = wire.NewSet(InitRedis, InitTestDB, InitLog)
 	userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewUserRepository, service.NewUserSvc)
 
-	articlSvcProvider = wire.NewSet(dao.NewGormArticleDAO, repository.NewCachedArticleRepo, service.NewArticleSvc)
+	articlSvcProvider = wire.NewSet(dao.NewGormArticleDAO, article.NewCachedAuthorRepo, article.NewCachedReaderRepo, service.NewArticleSvc)
 )

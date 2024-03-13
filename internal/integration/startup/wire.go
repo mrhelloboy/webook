@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/mrhelloboy/wehook/internal/repository"
+	"github.com/mrhelloboy/wehook/internal/repository/article"
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
 	"github.com/mrhelloboy/wehook/internal/service"
@@ -24,7 +25,8 @@ var (
 
 	articlSvcProvider = wire.NewSet(
 		dao.NewGormArticleDAO,
-		repository.NewCachedArticleRepo,
+		article.NewCachedAuthorRepo,
+		article.NewCachedReaderRepo,
 		service.NewArticleSvc,
 	)
 )
@@ -66,7 +68,8 @@ func InitArticleHandler() *web.ArticleHandler {
 	wire.Build(
 		thirdProvider,
 		dao.NewGormArticleDAO,
-		repository.NewCachedArticleRepo,
+		article.NewCachedAuthorRepo,
+		article.NewCachedReaderRepo,
 		service.NewArticleSvc,
 		web.NewArticleHandler,
 	)

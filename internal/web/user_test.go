@@ -4,6 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/service"
@@ -11,9 +15,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/mock/gomock"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func TestUserHandler_SignUp(t *testing.T) {
@@ -147,7 +148,7 @@ func TestUserHandler_SignUp(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			server := gin.Default()
-			h := NewUserHandler(tc.mock(ctrl), nil)
+			h := NewUserHandler(tc.mock(ctrl), nil, nil, nil)
 			h.RegisterRouters(server)
 
 			// 构建请求
@@ -275,7 +276,7 @@ func TestUserHandler_LoginSMS(t *testing.T) {
 			// gin server and user handler
 			server := gin.Default()
 			usersvc, codesvc := tc.mock(ctrl)
-			h := NewUserHandler(usersvc, codesvc)
+			h := NewUserHandler(usersvc, codesvc, nil, nil)
 			h.RegisterRouters(server)
 			// request
 			req, err := http.NewRequest(http.MethodPost, "/user/login_sms", bytes.NewBuffer([]byte(tc.reqBody)))
@@ -287,7 +288,6 @@ func TestUserHandler_LoginSMS(t *testing.T) {
 
 			assert.Equal(t, tc.wantCode, resp.Code)
 			assert.Equal(t, tc.wantRespBody(), resp.Body.String())
-
 		})
 	}
 }
