@@ -24,7 +24,7 @@ func NewCachedReaderRepo(dao daoArt.ReaderDAO) ReaderRepository {
 func (c *CachedReaderRepo) Save(ctx context.Context, art domain.Article) error {
 	now := time.Now().UnixMilli()
 
-	return c.dao.Upsert(ctx, daoArt.PublishArticle{Article: daoArt.Article{
+	return c.dao.Upsert(ctx, daoArt.PublishedArticle{Article: daoArt.Article{
 		Id:       art.Id,
 		Title:    art.Title,
 		Content:  art.Content,

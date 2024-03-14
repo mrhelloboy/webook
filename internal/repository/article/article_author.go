@@ -12,6 +12,7 @@ type AuthorRepository interface {
 	Create(ctx context.Context, art domain.Article) (int64, error)
 	Update(ctx context.Context, art domain.Article) error
 	Sync(ctx context.Context, art domain.Article) (int64, error)
+	SyncStatus(ctx context.Context, id int64, author int64, status domain.ArticleStatus) error
 }
 
 type cachedAuthorRepo struct {
@@ -30,6 +31,7 @@ func (c *cachedAuthorRepo) Update(ctx context.Context, art domain.Article) error
 		Title:    art.Title,
 		Content:  art.Content,
 		AuthorId: art.Author.Id,
+		Status:   art.Status.ToUint8(),
 	})
 }
 
@@ -38,11 +40,16 @@ func (c *cachedAuthorRepo) Create(ctx context.Context, art domain.Article) (int6
 		Title:    art.Title,
 		Content:  art.Content,
 		AuthorId: art.Author.Id,
+		Status:   art.Status.ToUint8(),
 	})
 }
 
 func (c *cachedAuthorRepo) Sync(ctx context.Context, art domain.Article) (int64, error) {
 	return c.dao.Sync(ctx, c.toEntity(art))
+}
+
+func (c *cachedAuthorRepo) SyncStatus(ctx context.Context, id int64, author int64, status domain.ArticleStatus) error {
+	return c.dao.SyncStatus(ctx, id, author, status.ToUint8())
 }
 
 func (c *cachedAuthorRepo) toEntity(article domain.Article) daoArt.Article {
@@ -51,5 +58,6 @@ func (c *cachedAuthorRepo) toEntity(article domain.Article) daoArt.Article {
 		Title:    article.Title,
 		Content:  article.Content,
 		AuthorId: article.Author.Id,
+		Status:   article.Status.ToUint8(),
 	}
 }

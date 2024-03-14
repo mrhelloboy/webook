@@ -29,6 +29,37 @@ func (a *ArticleHandler) RegisterRouters(server *gin.Engine) {
 	g := server.Group("/article")
 	g.POST("/edit", a.Edit)
 	g.POST("/publish", a.Publish)
+	g.POST("/withdraw", a.Withdraw)
+}
+
+// Withdraw 撤回公开发表状态的帖子，改为不可见状态
+func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
+	type Req struct {
+		Id int64
+	}
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+	c := ctx.MustGet("claims")
+	claims, ok := c.(*ijwt.UserClaims)
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		a.l.Error("未发现用户的 session 信息")
+		return
+	}
+
+	err := a.svc.Withdraw(ctx, domain.Article{
+		Id:     req.Id,
+		Author: domain.Author{Id: claims.Uid},
+	})
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		a.l.Error("帖子测回失败", logger.Error(err))
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{Msg: "OK"})
 }
 
 // Publish 帖子发布

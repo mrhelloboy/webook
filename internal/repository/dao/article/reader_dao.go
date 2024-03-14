@@ -8,7 +8,7 @@ import (
 )
 
 type ReaderDAO interface {
-	Upsert(ctx context.Context, art PublishArticle) error
+	Upsert(ctx context.Context, art PublishedArticle) error
 }
 
 type gormReaderDAO struct {
@@ -20,7 +20,7 @@ func NewGormReaderDAO(db *gorm.DB) ReaderDAO {
 }
 
 // Upsert 插入或更新文章
-func (g *gormReaderDAO) Upsert(ctx context.Context, art PublishArticle) error {
+func (g *gormReaderDAO) Upsert(ctx context.Context, art PublishedArticle) error {
 	err := g.db.Clauses(clause.OnConflict{
 		DoUpdates: clause.Assignments(map[string]any{
 			"title":   art.Title,
@@ -31,7 +31,7 @@ func (g *gormReaderDAO) Upsert(ctx context.Context, art PublishArticle) error {
 	return err
 }
 
-// PublishArticle 线上库，表结构跟制作库一致
-type PublishArticle struct {
+// PublishedArticle 线上库，表结构跟制作库一致，表示已发表的状态
+type PublishedArticle struct {
 	Article
 }
