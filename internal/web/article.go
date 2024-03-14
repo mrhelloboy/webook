@@ -51,7 +51,7 @@ func (a *ArticleHandler) Withdraw(ctx *gin.Context) {
 
 	err := a.svc.Withdraw(ctx, domain.Article{
 		Id:     req.Id,
-		Author: domain.Author{Id: claims.Uid},
+		Author: domain.Author{Id: claims.Id},
 	})
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
@@ -79,7 +79,7 @@ func (a *ArticleHandler) Publish(ctx *gin.Context) {
 		return
 	}
 
-	id, err := a.svc.Publish(ctx, req.toDomain(claims.Uid))
+	id, err := a.svc.Publish(ctx, req.toDomain(claims.Id))
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 		a.l.Error("帖子发布失败", logger.Error(err))
@@ -108,7 +108,7 @@ func (a *ArticleHandler) Edit(ctx *gin.Context) {
 		return
 	}
 
-	id, err := a.svc.Save(ctx, req.toDomain(claims.Uid))
+	id, err := a.svc.Save(ctx, req.toDomain(claims.Id))
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,

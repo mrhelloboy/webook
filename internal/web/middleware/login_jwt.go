@@ -1,11 +1,12 @@
 package middleware
 
 import (
+	"log"
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
-	"log"
-	"net/http"
 )
 
 /**
@@ -45,14 +46,13 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte("Xorxo9JJUq0v0PbqVbrRjThJXTCGORkW"), nil
 		})
-
 		if err != nil {
 			// 解析失败
 			log.Println("jwt 解析失败：", err)
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		if !token.Valid || claims.Uid == 0 {
+		if !token.Valid || claims.Id == 0 {
 			// 解析失败
 			log.Println("token valid fail or claims.uid == 0")
 			ctx.AbortWithStatus(http.StatusUnauthorized)

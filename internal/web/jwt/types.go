@@ -15,13 +15,13 @@ type Handler interface {
 
 type UserClaims struct {
 	jwt.RegisteredClaims
-	Uid       int64
+	Id        int64
 	Ssid      string
 	UserAgent string
 }
 
 type RefreshClaims struct {
 	jwt.RegisteredClaims
-	Uid  int64
+	Id   int64
 	Ssid string
 }

@@ -36,7 +36,7 @@ func (s *ArticleTestSuite) SetupSuite() {
 
 	s.server.Use(func(ctx *gin.Context) {
 		ctx.Set("claims", &ijwt.UserClaims{
-			Uid: 123,
+			Id: 123,
 		})
 	})
 

@@ -76,7 +76,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 
 			server := gin.Default()
 			server.Use(func(ctx *gin.Context) {
-				ctx.Set("claims", &ijwt.UserClaims{Uid: 123})
+				ctx.Set("claims", &ijwt.UserClaims{Id: 123})
 			})
 			h := NewArticleHandler(tc.mock(ctrl), &logger.NopLogger{})
 			h.RegisterRouters(server)

@@ -3,12 +3,13 @@ package jwt
 import (
 	"errors"
 	"fmt"
+	"strings"
+	"time"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
-	"strings"
-	"time"
 )
 
 var (
@@ -46,7 +47,7 @@ func (h *RedisJWTHandler) setRefreshToken(ctx *gin.Context, uid int64, ssid stri
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 7)),
 		},
-		Uid:  uid,
+		Id:   uid,
 		Ssid: ssid,
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
@@ -106,7 +107,7 @@ func (h *RedisJWTHandler) SetJWTToken(ctx *gin.Context, uid int64, ssid string) 
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24)),
 		},
-		Uid:       uid,
+		Id:        uid,
 		Ssid:      ssid,
 		UserAgent: ctx.Request.UserAgent(),
 	}

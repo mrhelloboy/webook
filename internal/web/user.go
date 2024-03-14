@@ -2,6 +2,8 @@ package web
 
 import (
 	"errors"
+	"net/http"
+
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -11,7 +13,6 @@ import (
 	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
-	"net/http"
 )
 
 const biz = "login"
@@ -88,7 +89,7 @@ func (u *UserHandler) RefreshToken(ctx *gin.Context) {
 	}
 
 	// 设置新的 JWT token
-	err = u.SetJWTToken(ctx, rc.Uid, rc.Ssid)
+	err = u.SetJWTToken(ctx, rc.Id, rc.Ssid)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		zap.L().Error("设置 JWT token 失败", zap.Error(err))
@@ -253,8 +254,8 @@ func (u *UserHandler) Logout(ctx *gin.Context) {
 	// session 处理方案
 	sess := sessions.Default(ctx)
 	sess.Options(sessions.Options{
-		//Secure: true,
-		//HttpOnly: true,
+		// Secure: true,
+		// HttpOnly: true,
 		MaxAge: -1, // 立即过期
 	})
 	sess.Clear()
@@ -337,7 +338,6 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 
 // Edit 修改用户信息（手机、邮箱、密码的修改需要验证才能修改）
 func (u *UserHandler) Edit(ctx *gin.Context) {
-
 }
 
 // Profile 用户信息
@@ -353,7 +353,7 @@ func (u *UserHandler) ProfileJWT(ctx *gin.Context) {
 		Nickname string
 	}
 	uc := ctx.MustGet("claims").(*myjwt.UserClaims)
-	user, err := u.svc.Profile(ctx, uc.Uid)
+	user, err := u.svc.Profile(ctx, uc.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 		return
