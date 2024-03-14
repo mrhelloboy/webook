@@ -41,12 +41,11 @@ func (m *MockReaderRepository) EXPECT() *MockReaderRepositoryMockRecorder {
 }
 
 // Save mocks base method.
-func (m *MockReaderRepository) Save(ctx context.Context, art domain.Article) (int64, error) {
+func (m *MockReaderRepository) Save(ctx context.Context, art domain.Article) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Save", ctx, art)
-	ret0, _ := ret[0].(int64)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret0, _ := ret[0].(error)
+	return ret0
 }
 
 // Save indicates an expected call of Save.

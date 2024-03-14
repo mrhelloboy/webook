@@ -9,8 +9,10 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/mrhelloboy/wehook/internal/repository"
+	article2 "github.com/mrhelloboy/wehook/internal/repository/article"
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
+	"github.com/mrhelloboy/wehook/internal/repository/dao/article"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/web"
 	"github.com/mrhelloboy/wehook/internal/web/jwt"
@@ -41,9 +43,11 @@ func InitWebServer() *gin.Engine {
 	userHandler := web.NewUserHandler(userService, codeService, cmdable, handler)
 	wechatService := ioc.InitOAuth2WechatService(logger)
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
-	articleDAO := dao.NewGormArticleDAO(db)
-	articleRepository := repository.NewCachedArticleRepo(articleDAO)
-	articleService := service.NewArticleSvc(articleRepository)
+	authorDAO := article.NewGormArticleDAO(db)
+	authorRepository := article2.NewCachedAuthorRepo(authorDAO)
+	readerDAO := article.NewGormReaderDAO(db)
+	readerRepository := article2.NewCachedReaderRepo(readerDAO)
+	articleService := service.NewArticleSvc(authorRepository, readerRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger)
 	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine

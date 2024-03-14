@@ -6,8 +6,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/mrhelloboy/wehook/internal/repository"
+	"github.com/mrhelloboy/wehook/internal/repository/article"
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
+	daoArt "github.com/mrhelloboy/wehook/internal/repository/dao/article"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/web"
 	myjwt "github.com/mrhelloboy/wehook/internal/web/jwt"
@@ -19,9 +21,9 @@ func InitWebServer() *gin.Engine {
 		ioc.InitDB, ioc.InitRedis,
 		ioc.InitLogger,
 		dao.NewUserDAO, cache.NewUserCache, cache.NewCodeCache,
-		dao.NewGormArticleDAO,
+		daoArt.NewGormArticleDAO, daoArt.NewGormReaderDAO,
 		repository.NewUserRepository, repository.NewCachedCodeRepository,
-		repository.NewCachedArticleRepo,
+		article.NewCachedAuthorRepo, article.NewCachedReaderRepo,
 		service.NewUserSvc, service.NewCodeSvc,
 		service.NewArticleSvc,
 		ioc.InitOAuth2WechatService,

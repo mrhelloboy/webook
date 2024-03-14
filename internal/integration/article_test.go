@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/mrhelloboy/wehook/internal/repository/dao"
+	dao "github.com/mrhelloboy/wehook/internal/repository/dao/article"
 	ijwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 
 	"gorm.io/gorm"

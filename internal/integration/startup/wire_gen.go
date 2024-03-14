@@ -10,9 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"github.com/mrhelloboy/wehook/internal/repository"
-	"github.com/mrhelloboy/wehook/internal/repository/article"
+	article2 "github.com/mrhelloboy/wehook/internal/repository/article"
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
+	"github.com/mrhelloboy/wehook/internal/repository/dao/article"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/web"
 	"github.com/mrhelloboy/wehook/internal/web/jwt"
@@ -39,9 +40,10 @@ func InitWebServer() *gin.Engine {
 	userHandler := web.NewUserHandler(userService, codeService, cmdable, handler)
 	wechatService := InitPhantomWechatService(logger)
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
-	articleDAO := dao.NewGormArticleDAO(gormDB)
-	authorRepository := article.NewCachedAuthorRepo(articleDAO)
-	readerRepository := article.NewCachedReaderRepo()
+	authorDAO := article.NewGormArticleDAO(gormDB)
+	authorRepository := article2.NewCachedAuthorRepo(authorDAO)
+	readerDAO := article.NewGormReaderDAO(gormDB)
+	readerRepository := article2.NewCachedReaderRepo(readerDAO)
 	articleService := service.NewArticleSvc(authorRepository, readerRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger)
 	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler, articleHandler)
@@ -50,9 +52,10 @@ func InitWebServer() *gin.Engine {
 
 func InitArticleHandler() *web.ArticleHandler {
 	gormDB := InitTestDB()
-	articleDAO := dao.NewGormArticleDAO(gormDB)
-	authorRepository := article.NewCachedAuthorRepo(articleDAO)
-	readerRepository := article.NewCachedReaderRepo()
+	authorDAO := article.NewGormArticleDAO(gormDB)
+	authorRepository := article2.NewCachedAuthorRepo(authorDAO)
+	readerDAO := article.NewGormReaderDAO(gormDB)
+	readerRepository := article2.NewCachedReaderRepo(readerDAO)
 	logger := InitLog()
 	articleService := service.NewArticleSvc(authorRepository, readerRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger)
@@ -82,5 +85,5 @@ var (
 	thirdProvider   = wire.NewSet(InitRedis, InitTestDB, InitLog)
 	userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewUserRepository, service.NewUserSvc)
 
-	articlSvcProvider = wire.NewSet(dao.NewGormArticleDAO, article.NewCachedAuthorRepo, article.NewCachedReaderRepo, service.NewArticleSvc)
+	articlSvcProvider = wire.NewSet(article.NewGormArticleDAO, article.NewGormReaderDAO, article2.NewCachedAuthorRepo, article2.NewCachedReaderRepo, service.NewArticleSvc)
 )

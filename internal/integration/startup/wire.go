@@ -9,6 +9,7 @@ import (
 	"github.com/mrhelloboy/wehook/internal/repository/article"
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
+	daoArt "github.com/mrhelloboy/wehook/internal/repository/dao/article"
 	"github.com/mrhelloboy/wehook/internal/service"
 	"github.com/mrhelloboy/wehook/internal/web"
 	ijwt "github.com/mrhelloboy/wehook/internal/web/jwt"
@@ -24,7 +25,8 @@ var (
 		service.NewUserSvc)
 
 	articlSvcProvider = wire.NewSet(
-		dao.NewGormArticleDAO,
+		daoArt.NewGormArticleDAO,
+		daoArt.NewGormReaderDAO,
 		article.NewCachedAuthorRepo,
 		article.NewCachedReaderRepo,
 		service.NewArticleSvc,
@@ -67,7 +69,8 @@ func InitWebServer() *gin.Engine {
 func InitArticleHandler() *web.ArticleHandler {
 	wire.Build(
 		thirdProvider,
-		dao.NewGormArticleDAO,
+		daoArt.NewGormArticleDAO,
+		daoArt.NewGormReaderDAO,
 		article.NewCachedAuthorRepo,
 		article.NewCachedReaderRepo,
 		service.NewArticleSvc,
