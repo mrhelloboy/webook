@@ -42,22 +42,16 @@ func InitWebServer() *gin.Engine {
 	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler)
 	authorDAO := article.NewGormArticleDAO(gormDB)
 	authorRepository := article2.NewCachedAuthorRepo(authorDAO)
-	readerDAO := article.NewGormReaderDAO(gormDB)
-	readerRepository := article2.NewCachedReaderRepo(readerDAO)
-	articleService := service.NewArticleSvc(authorRepository, readerRepository, logger)
+	articleService := service.NewArticleSvc(authorRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger)
 	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler, articleHandler)
 	return engine
 }
 
-func InitArticleHandler() *web.ArticleHandler {
-	gormDB := InitTestDB()
-	authorDAO := article.NewGormArticleDAO(gormDB)
-	authorRepository := article2.NewCachedAuthorRepo(authorDAO)
-	readerDAO := article.NewGormReaderDAO(gormDB)
-	readerRepository := article2.NewCachedReaderRepo(readerDAO)
+func InitArticleHandler(dao2 article.AuthorDAO) *web.ArticleHandler {
+	authorRepository := article2.NewCachedAuthorRepo(dao2)
 	logger := InitLog()
-	articleService := service.NewArticleSvc(authorRepository, readerRepository, logger)
+	articleService := service.NewArticleSvc(authorRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, logger)
 	return articleHandler
 }
@@ -85,5 +79,5 @@ var (
 	thirdProvider   = wire.NewSet(InitRedis, InitTestDB, InitLog)
 	userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewUserRepository, service.NewUserSvc)
 
-	articlSvcProvider = wire.NewSet(article.NewGormArticleDAO, article.NewGormReaderDAO, article2.NewCachedAuthorRepo, article2.NewCachedReaderRepo, service.NewArticleSvc)
+	articlSvcProvider = wire.NewSet(article.NewGormArticleDAO, article2.NewCachedAuthorRepo, service.NewArticleSvc)
 )

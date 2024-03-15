@@ -16,14 +16,12 @@ type ArticleService interface {
 
 type articleSvc struct {
 	authorRepo article.AuthorRepository
-	readerRepo article.ReaderRepository
 	l          logger.Logger
 }
 
-func NewArticleSvc(authorRepo article.AuthorRepository, readerRepo article.ReaderRepository, l logger.Logger) ArticleService {
+func NewArticleSvc(authorRepo article.AuthorRepository, l logger.Logger) ArticleService {
 	return &articleSvc{
 		authorRepo: authorRepo,
-		readerRepo: readerRepo,
 		l:          l,
 	}
 }
@@ -38,38 +36,6 @@ func (a *articleSvc) Withdraw(ctx context.Context, art domain.Article) error {
 // 2. 用户之前发表过帖子，在制作库上有记录，编辑帖子再发布（更新帖子，再发布）
 func (a *articleSvc) Publish(ctx context.Context, art domain.Article) (int64, error) {
 	art.Status = domain.ArticleStatusPublished // 状态改为公开
-	//id := art.Id
-	//var err error
-	//
-	//// 更新或者创建制作库
-	//if art.Id > 0 {
-	//	err = a.authorRepo.Update(ctx, art)
-	//} else {
-	//	id, err = a.authorRepo.Create(ctx, art)
-	//}
-	//if err != nil {
-	//	return 0, err
-	//}
-	//
-	//art.Id = id
-	//// 同步到线上库 - 重试
-	//for i := 0; i < 3; i++ {
-	//	time.Sleep(time.Second * time.Duration(i))
-	//	err = a.readerRepo.Save(ctx, art)
-	//	if err == nil {
-	//		break
-	//	}
-	//	// 同步线上库失败
-	//	a.l.Error("部分失败，保存到线上库失败", logger.Int64("art_id", art.Id), logger.Error(err))
-	//}
-	//if err != nil {
-	//	a.l.Error("全部失败，重试彻底失败", logger.Int64("art_id", art.Id), logger.Error(err))
-	//	// todo: 添加告警系统
-	//	// todo: 或者走异步，走 Canal， MQ
-	//}
-	//return id, err
-
-	// 方式二
 	return a.authorRepo.Sync(ctx, art)
 }
 

@@ -9,16 +9,32 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type AuthorDAO interface {
-	Insert(ctx context.Context, art Article) (int64, error)
-	UpdateById(ctx context.Context, art Article) error
-	Sync(ctx context.Context, art Article) (int64, error)
-	Upsert(ctx context.Context, art PublishedArticle) error
-	SyncStatus(ctx context.Context, id int64, author int64, status uint8) error
-}
-
 type gormAuthorDAO struct {
 	db *gorm.DB
+}
+
+// GetByAuthor 获取作者的文章列表 - 分页功能
+func (g *gormAuthorDAO) GetByAuthor(ctx context.Context, author int64, offset, limit int) ([]Article, error) {
+	var arts []Article
+	err := g.db.WithContext(ctx).Model(&Article{}).
+		Where("author_id = ?", author).
+		Offset(offset).
+		Limit(limit).
+		Order("utime DESC").
+		Find(&arts).Error
+	return arts, err
+}
+
+func (g *gormAuthorDAO) GetById(ctx context.Context, id int64) (Article, error) {
+	var art Article
+	err := g.db.WithContext(ctx).Where("id = ?", id).First(&art).Error
+	return art, err
+}
+
+func (g *gormAuthorDAO) GetPubById(ctx context.Context, id int64) (PublishedArticle, error) {
+	var pubArt PublishedArticle
+	err := g.db.WithContext(ctx).Where("id = ?", id).First(&pubArt).Error
+	return pubArt, err
 }
 
 func (g *gormAuthorDAO) SyncStatus(ctx context.Context, id int64, author int64, status uint8) error {
@@ -80,6 +96,11 @@ func (g *gormAuthorDAO) Sync(ctx context.Context, art Article) (int64, error) {
 	// GORM 进行了事务生命周期的管理，Begin，Rollback，Commit 都不需要我们操心
 	err := g.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var err error
+		// 为什么要创建一个新的 DAO 对象？
+		// 事务内部会创建一个新的基于当前连接的 *gorm.DB 实例 tx，这个实例只在当前事务范围内有效，
+		// 从而避免了直接在线程间共享 *gorm.DB 实例的问题。
+		// 在事务内部都要通过 tx 来操作数据库，重新创建一个 DAO 对象可以避免直接操作 g.db，
+		// 从而避免在事务内部共享 g.db 实例带来的问题。
 		txDAO := NewGormArticleDAO(tx)
 		// 先在制作库上进行更新或者新建
 		if id > 0 {
@@ -91,54 +112,36 @@ func (g *gormAuthorDAO) Sync(ctx context.Context, art Article) (int64, error) {
 			return err
 		}
 		// 更新线上库
-		return txDAO.Upsert(ctx, PublishedArticle{Article: art})
+		// todo：
+		now := time.Now().UnixMilli()
+		publishArt := PublishedArticle{Article: art}
+		publishArt.Ctime = now
+		publishArt.Utime = now
+		err = tx.Clauses(clause.OnConflict{
+			// SQL 2003 标准
+			// INSERT aaa ON CONFLICT(bbb) DO NOTHING
+			// INSERT aaa ON CONFLICT(bbb) DO UPDATE SET ccc WHERE ddd
+
+			// 冲突字段
+			//Columns: []clause.Column{{Name: "id"}},
+			// 数据冲突时，什么也不做
+			//DoNothing: true,
+			// 数据冲突时，并且符合 WHERE 条件时就会执行 DO UPDATE
+			//Where: clause.Where{
+			//}
+			// MySQL 只需使用 DoUpdates 字段
+			DoUpdates: clause.Assignments(map[string]any{
+				"title":   art.Title,
+				"content": art.Content,
+				"status":  art.Status,
+				"utime":   now,
+			}),
+		}).Create(&publishArt).Error
+		return err
 	})
 	return id, err
 }
 
-// Upsert 对线上库进行更新或者创建操作
-// Upsert: 对应数据库的 INSERT or UPDATE 操作
-func (g *gormAuthorDAO) Upsert(ctx context.Context, art PublishedArticle) error {
-	now := time.Now().UnixMilli()
-	art.Ctime = now
-	art.Utime = now
-	// SQL: INSERT xxx ON DUPLICATE KEY UPDATE xxx
-	err := g.db.Clauses(clause.OnConflict{
-		// SQL 2003 标准
-		// INSERT aaa ON CONFLICT(bbb) DO NOTHING
-		// INSERT aaa ON CONFLICT(bbb) DO UPDATE SET ccc WHERE ddd
-
-		// 冲突字段
-		//Columns: []clause.Column{{Name: "id"}},
-		// 数据冲突时，什么也不做
-		//DoNothing: true,
-		// 数据冲突时，并且符合 WHERE 条件时就会执行 DO UPDATE
-		//Where: clause.Where{
-		//}
-		// MySQL 只需使用 DoUpdates 字段
-		DoUpdates: clause.Assignments(map[string]any{
-			"title":   art.Title,
-			"content": art.Content,
-			"status":  art.Status,
-			"utime":   now,
-		}),
-	}).Create(&art).Error
-	// 一条 SQL 语句都不需要开启事务
-	// auto commit: 自动提交
-	return err
-}
-
 func NewGormArticleDAO(db *gorm.DB) AuthorDAO {
 	return &gormAuthorDAO{db: db}
-}
-
-// Article 制作库
-type Article struct {
-	Id       int64  `gorm:"primary_key,autoIncrement"`
-	Title    string `gorm:"type=varchar(1024)"`
-	Content  string `gorm:"type=BLOB"`
-	AuthorId int64  `gorm:"index"`
-	Status   uint8
-	Ctime    int64
-	Utime    int64
 }

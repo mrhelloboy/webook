@@ -26,9 +26,9 @@ var (
 
 	articlSvcProvider = wire.NewSet(
 		daoArt.NewGormArticleDAO,
-		daoArt.NewGormReaderDAO,
+		// daoArt.NewGormReaderDAO,
 		article.NewCachedAuthorRepo,
-		article.NewCachedReaderRepo,
+		// article.NewCachedReaderRepo,
 		service.NewArticleSvc,
 	)
 )
@@ -66,17 +66,14 @@ func InitWebServer() *gin.Engine {
 	return gin.Default()
 }
 
-func InitArticleHandler() *web.ArticleHandler {
+func InitArticleHandler(dao daoArt.AuthorDAO) *web.ArticleHandler {
 	wire.Build(
 		thirdProvider,
-		daoArt.NewGormArticleDAO,
-		daoArt.NewGormReaderDAO,
 		article.NewCachedAuthorRepo,
-		article.NewCachedReaderRepo,
 		service.NewArticleSvc,
 		web.NewArticleHandler,
 	)
-	return &web.ArticleHandler{}
+	return new(web.ArticleHandler)
 }
 
 func InitUserSvc() service.UserService {

@@ -7,10 +7,6 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-type ReaderDAO interface {
-	Upsert(ctx context.Context, art PublishedArticle) error
-}
-
 type gormReaderDAO struct {
 	db *gorm.DB
 }
@@ -29,9 +25,4 @@ func (g *gormReaderDAO) Upsert(ctx context.Context, art PublishedArticle) error 
 		}),
 	}).Create(&art).Error
 	return err
-}
-
-// PublishedArticle 线上库，表结构跟制作库一致，表示已发表的状态
-type PublishedArticle struct {
-	Article
 }
