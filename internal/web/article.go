@@ -2,12 +2,15 @@ package web
 
 import (
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/service"
 	ijwt "github.com/mrhelloboy/wehook/internal/web/jwt"
 	"github.com/mrhelloboy/wehook/pkg/logger"
 
+	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,6 +33,119 @@ func (a *ArticleHandler) RegisterRouters(server *gin.Engine) {
 	g.POST("/edit", a.Edit)
 	g.POST("/publish", a.Publish)
 	g.POST("/withdraw", a.Withdraw)
+	g.POST("/list", a.List)
+	g.GET("/detail/:id", a.Detail)
+
+	// 普通用户
+	pub := g.Group("/pub")
+	pub.GET("/:id", a.PubDetail)
+}
+
+func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "参数错误"})
+		a.l.Error("前端输入 ID 有误", logger.Error(err))
+		return
+	}
+
+	art, err := a.svc.GetPublishedById(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+	}
+
+	ctx.JSON(http.StatusOK, Result{Data: ArticleVO{
+		Id:      art.Id,
+		Title:   art.Title,
+		Content: art.Content,
+		Status:  art.Status.ToUint8(),
+		Author:  art.Author.Name,
+		Ctime:   art.Ctime.Format(time.DateTime),
+		Utime:   art.Utime.Format(time.DateTime),
+	}})
+}
+
+// Detail 获取某一帖子详情信息
+func (a *ArticleHandler) Detail(ctx *gin.Context) {
+	idStr := ctx.Param("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "参数错误"})
+		a.l.Error("前端输入 ID 有误", logger.Error(err))
+		return
+	}
+
+	art, err := a.svc.GetById(ctx, id)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+
+	c := ctx.MustGet("claims")
+	uc, ok := c.(*ijwt.UserClaims)
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		a.l.Error("未发现用户的 session 信息")
+		return
+	}
+
+	if art.Author.Id != uc.Id {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "输入有误"})
+		a.l.Error("非法访问帖子，创作者 ID 不匹配", logger.String("访问者ID", uc.Id))
+		// Todo: 需要监控上报
+		return
+	}
+
+	ctx.JSON(http.StatusOK, Result{Data: ArticleVO{
+		Id:    art.Id,
+		Title: art.Title,
+		// Abstract: art.Abstract(),
+		Content: art.Content,
+		Status:  art.Status.ToUint8(),
+		// Author:   art.Author.Name,
+		Ctime: art.Ctime.Format(time.DateTime),
+		Utime: art.Utime.Format(time.DateTime),
+	}})
+}
+
+// List 获取作者帖子列表(分页，只显示摘要）
+func (a *ArticleHandler) List(ctx *gin.Context) {
+	type Req struct {
+		Offset int `json:"offset"`
+		Limit  int `json:"limit"`
+	}
+	var req Req
+	if err := ctx.Bind(&req); err != nil {
+		return
+	}
+
+	c := ctx.MustGet("claims")
+	claims, ok := c.(*ijwt.UserClaims)
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		a.l.Error("未发现用户的 session 信息")
+		return
+	}
+	res, err := a.svc.List(ctx, claims.Id, req.Offset, req.Limit)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{
+		Data: slice.Map[domain.Article, ArticleVO](res, func(idx int, src domain.Article) ArticleVO {
+			return ArticleVO{
+				Id:       src.Id,
+				Title:    src.Title,
+				Abstract: src.Abstract(),
+				// Content:  src.Content,
+				Status: src.Status.ToUint8(),
+				// Author:   src.Author.Name,
+				Ctime: src.Ctime.Format(time.DateTime),
+				Utime: src.Utime.Format(time.DateTime),
+			}
+		}),
+	})
 }
 
 // Withdraw 撤回公开发表状态的帖子，改为不可见状态

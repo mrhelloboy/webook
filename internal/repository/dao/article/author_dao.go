@@ -16,6 +16,7 @@ type gormAuthorDAO struct {
 // GetByAuthor 获取作者的文章列表 - 分页功能
 func (g *gormAuthorDAO) GetByAuthor(ctx context.Context, author int64, offset, limit int) ([]Article, error) {
 	var arts []Article
+	// todo: 数据库查询优化：author_id, utime 作为联合索引
 	err := g.db.WithContext(ctx).Model(&Article{}).
 		Where("author_id = ?", author).
 		Offset(offset).

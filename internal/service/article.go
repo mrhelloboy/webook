@@ -12,6 +12,9 @@ type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
 	Publish(ctx context.Context, art domain.Article) (int64, error)
 	Withdraw(ctx context.Context, art domain.Article) error
+	List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
+	GetById(ctx context.Context, id int64) (domain.Article, error)
+	GetPublishedById(ctx context.Context, id int64) (domain.Article, error)
 }
 
 type articleSvc struct {
@@ -24,6 +27,18 @@ func NewArticleSvc(authorRepo article.AuthorRepository, l logger.Logger) Article
 		authorRepo: authorRepo,
 		l:          l,
 	}
+}
+
+func (a *articleSvc) GetPublishedById(ctx context.Context, id int64) (domain.Article, error) {
+	return a.authorRepo.GetPublishedById(ctx, id)
+}
+
+func (a *articleSvc) GetById(ctx context.Context, id int64) (domain.Article, error) {
+	return a.authorRepo.GetById(ctx, id)
+}
+
+func (a *articleSvc) List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error) {
+	return a.authorRepo.List(ctx, uid, offset, limit)
 }
 
 // Withdraw 撤回了帖子公开可见状态，改为私有（仅自己可见）
