@@ -17,14 +17,17 @@ import (
 var _ Handler = (*ArticleHandler)(nil)
 
 type ArticleHandler struct {
-	svc service.ArticleService
-	l   logger.Logger
+	svc      service.ArticleService
+	interSvc service.InteractiveService
+	l        logger.Logger
+	biz      string
 }
 
 func NewArticleHandler(svc service.ArticleService, l logger.Logger) *ArticleHandler {
 	return &ArticleHandler{
 		svc: svc,
 		l:   l,
+		biz: "article",
 	}
 }
 
@@ -39,6 +42,44 @@ func (a *ArticleHandler) RegisterRouters(server *gin.Engine) {
 	// 普通用户
 	pub := g.Group("/pub")
 	pub.GET("/:id", a.PubDetail)
+	pub.POST("/like", a.Like)
+}
+
+// Like 点赞 or 取消点赞
+func (a *ArticleHandler) Like(ctx *gin.Context) {
+	type Req struct {
+		Id   int64 `json:"id"`
+		Like bool  `json:"like"`
+	}
+	var req Req
+	var err error
+	if err = ctx.Bind(&req); err != nil {
+		return
+	}
+
+	c, ok := ctx.Get("claims")
+	if !ok {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	uc, ok := c.(*ijwt.UserClaims)
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		a.l.Error("未发现用户的 session 信息")
+		return
+	}
+	if req.Like {
+		err = a.interSvc.Like(ctx, a.biz, req.Id, uc.Id)
+	} else {
+		err = a.interSvc.CancelLike(ctx, a.biz, req.Id, uc.Id)
+	}
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		a.l.Error("点赞/取消点赞出错", logger.Error(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, Result{Msg: "OK"})
 }
 
 func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
@@ -54,6 +95,14 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
 	}
+
+	// 添加阅读计数
+	go func() {
+		er := a.interSvc.IncrReadCnt(ctx, a.biz, art.Id)
+		if er != nil {
+			a.l.Error("增加阅读计数失败", logger.Int64("aid", art.Id), logger.Error(er))
+		}
+	}()
 
 	ctx.JSON(http.StatusOK, Result{Data: ArticleVO{
 		Id:      art.Id,

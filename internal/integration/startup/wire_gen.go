@@ -73,6 +73,17 @@ func InitJwtHdl() jwt.Handler {
 	return handler
 }
 
+func InitInteractiveService() service.InteractiveService {
+	gormDB := InitTestDB()
+	interactiveDAO := dao.NewGormInteractiveDAO(gormDB)
+	cmdable := InitRedis()
+	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
+	logger := InitLog()
+	interactiveRepository := repository.NewCachedInteractiveRepo(interactiveDAO, interactiveCache, logger)
+	interactiveService := service.NewInteractiveService(interactiveRepository, logger)
+	return interactiveService
+}
+
 // wire.go:
 
 var (
@@ -80,4 +91,6 @@ var (
 	userSvcProvider = wire.NewSet(dao.NewUserDAO, cache.NewUserCache, repository.NewUserRepository, service.NewUserSvc)
 
 	articlSvcProvider = wire.NewSet(article.NewGormArticleDAO, article2.NewCachedAuthorRepo, service.NewArticleSvc)
+
+	interactiveSvcProvider = wire.NewSet(service.NewInteractiveService, repository.NewCachedInteractiveRepo, dao.NewGormInteractiveDAO, cache.NewRedisInteractiveCache)
 )

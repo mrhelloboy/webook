@@ -31,6 +31,13 @@ var (
 		// article.NewCachedReaderRepo,
 		service.NewArticleSvc,
 	)
+
+	interactiveSvcProvider = wire.NewSet(
+		service.NewInteractiveService,
+		repository.NewCachedInteractiveRepo,
+		dao.NewGormInteractiveDAO,
+		cache.NewRedisInteractiveCache,
+	)
 )
 
 func InitWebServer() *gin.Engine {
@@ -84,4 +91,9 @@ func InitUserSvc() service.UserService {
 func InitJwtHdl() ijwt.Handler {
 	wire.Build(thirdProvider, ijwt.NewRedisJWTHandler)
 	return ijwt.NewRedisJWTHandler(nil)
+}
+
+func InitInteractiveService() service.InteractiveService {
+	wire.Build(thirdProvider, interactiveSvcProvider)
+	return service.NewInteractiveService(nil, nil)
 }
