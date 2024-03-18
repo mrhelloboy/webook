@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/mrhelloboy/wehook/pkg/logger"
 
 	"github.com/mrhelloboy/wehook/internal/domain"
@@ -34,13 +36,39 @@ func NewInteractiveService(interRepo repository.InteractiveRepository, l logger.
 }
 
 func (i *interactiveSrv) Collect(ctx context.Context, biz string, bizId, cid, uid int64) error {
-	// TODO implement me
-	panic("implement me")
+	return i.interRepo.AddCollectionItem(ctx, biz, bizId, cid, uid)
 }
 
 func (i *interactiveSrv) Get(ctx context.Context, biz string, bizId, uid int64) (domain.Interactive, error) {
-	// TODO implement me
-	panic("implement me")
+	var eg errgroup.Group
+	var intr domain.Interactive
+	var liked bool
+	var collected bool
+
+	eg.Go(func() error {
+		var err error
+		intr, err = i.interRepo.Get(ctx, biz, bizId)
+		return err
+	})
+	// 是否点赞过
+	eg.Go(func() error {
+		var err error
+		liked, err = i.interRepo.Liked(ctx, biz, bizId, uid)
+		return err
+	})
+	// 是否收藏过
+	eg.Go(func() error {
+		var err error
+		collected, err = i.interRepo.Collected(ctx, biz, bizId, uid)
+		return err
+	})
+	err := eg.Wait()
+	if err != nil {
+		return domain.Interactive{}, err
+	}
+	intr.Liked = liked
+	intr.Collected = collected
+	return intr, nil
 }
 
 // Like 点赞

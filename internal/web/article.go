@@ -1,9 +1,12 @@
 package web
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/service"
@@ -91,9 +94,35 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 		return
 	}
 
-	art, err := a.svc.GetPublishedById(ctx, id)
+	var eg errgroup.Group
+	var art domain.Article
+	eg.Go(func() error {
+		art, err = a.svc.GetPublishedById(ctx, id)
+		return err
+	})
+	var intr domain.Interactive
+	eg.Go(func() error {
+		c, ok := ctx.Get("claims")
+		if !ok {
+			return errors.New("无法获取 claims 信息")
+		}
+		uc, ok := c.(*ijwt.UserClaims)
+		if !ok {
+			a.l.Error("未发现用户的 session 信息")
+			return errors.New("未发现用户的 session 信息")
+		}
+		intr, err = a.interSvc.Get(ctx, a.biz, id, uc.Id)
+		// 这里可以容错
+		if err != nil {
+			// 记日志
+		}
+		return err
+	})
+
+	err = eg.Wait()
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
 	}
 
 	// 添加阅读计数
@@ -105,13 +134,18 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 	}()
 
 	ctx.JSON(http.StatusOK, Result{Data: ArticleVO{
-		Id:      art.Id,
-		Title:   art.Title,
-		Content: art.Content,
-		Status:  art.Status.ToUint8(),
-		Author:  art.Author.Name,
-		Ctime:   art.Ctime.Format(time.DateTime),
-		Utime:   art.Utime.Format(time.DateTime),
+		Id:         art.Id,
+		Title:      art.Title,
+		Content:    art.Content,
+		Status:     art.Status.ToUint8(),
+		Author:     art.Author.Name,
+		Liked:      intr.Liked,
+		Collected:  intr.Collected,
+		LikeCnt:    intr.LikeCnt,
+		ReadCnt:    intr.ReadCnt,
+		CollectCnt: intr.CollectCnt,
+		Ctime:      art.Ctime.Format(time.DateTime),
+		Utime:      art.Utime.Format(time.DateTime),
 	}})
 }
 

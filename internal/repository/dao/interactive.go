@@ -9,6 +9,8 @@ import (
 	"gorm.io/gorm"
 )
 
+var ErrRecordNotFound = gorm.ErrRecordNotFound
+
 //go:generate mockgen -source=./interactive.go -package=daomocks -destination=mocks/interactive.mock.go InteractiveDAO
 
 type InteractiveDAO interface {
@@ -32,7 +34,7 @@ func NewGormInteractiveDAO(db *gorm.DB) InteractiveDAO {
 func (g *gormInteractiveDAO) GetLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserLikeBiz, error) {
 	var res UserLikeBiz
 	err := g.db.WithContext(ctx).
-		Where("biz = ? AND biz_id = ? AND uid = ? AND status", biz, bizId, uid, 1).
+		Where("biz = ? AND biz_id = ? AND uid = ? AND status = ?", biz, bizId, uid, 1).
 		First(&res).Error
 	return res, err
 }
@@ -44,15 +46,16 @@ func (g *gormInteractiveDAO) Get(ctx context.Context, biz string, bizId int64) (
 }
 
 func (g *gormInteractiveDAO) InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error {
-	// 插入收藏记录，并更新收藏数
 	now := time.Now().UnixMilli()
 	cb.Utime = now
 	cb.Ctime = now
 	return g.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 插入收藏记录
 		err := tx.WithContext(ctx).Create(&cb).Error
 		if err != nil {
 			return err
 		}
+		// 更新收藏数
 		return tx.Clauses(clause.OnConflict{DoUpdates: clause.Assignments(map[string]any{
 			"collect_cnt": gorm.Expr("collect_cnt + 1"),
 			"utime":       now,

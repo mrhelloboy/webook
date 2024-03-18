@@ -29,7 +29,7 @@ type InteractiveCache interface {
 	IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	IncrCollectCntIfPresent(ctx context.Context, biz string, bizId int64) error
-	// Get 查询缓存中的数据
+	// Get 查询缓存中的数据, liked 和 collected shi不需要缓存的
 	Get(ctx context.Context, biz string, bizId int64) (domain.Interactive, error)
 	Set(ctx context.Context, biz string, bizId int64, inter domain.Interactive) error
 }
@@ -89,8 +89,7 @@ func (r *redisInteractiveCache) IncrReadCntIfPresent(ctx context.Context, biz st
 }
 
 func (r *redisInteractiveCache) IncrCollectCntIfPresent(ctx context.Context, biz string, bizId int64) error {
-	// TODO implement me
-	panic("implement me")
+	return r.client.Eval(ctx, luaIncrCnt, []string{r.key(biz, bizId)}, fieldCollectCnt, 1).Err()
 }
 
 func (r *redisInteractiveCache) key(biz string, bizId int64) string {

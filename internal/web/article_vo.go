@@ -8,7 +8,14 @@ type ArticleVO struct {
 	Abstract string `json:"abstract"`
 	Content  string `json:"content"`
 	Status   uint8  `json:"status"`
-	Author   string `json:"author"`
-	Ctime    string `json:"ctime"`
-	Utime    string `json:"utime"`
+	// 计数
+	Author     string `json:"author"`
+	ReadCnt    int64  `json:"read_cnt"`
+	LikeCnt    int64  `json:"like_cnt"`
+	CollectCnt int64  `json:"collect_cnt"`
+	// 本人是否点赞、收藏
+	Liked     bool   `json:"liked"`
+	Collected bool   `json:"collected"`
+	Ctime     string `json:"ctime"`
+	Utime     string `json:"utime"`
 }
