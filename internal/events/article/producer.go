@@ -9,6 +9,7 @@ import (
 
 type Producer interface {
 	ProduceReadEvent(ctx context.Context, evt ReadEvent) error
+	ProduceReadEventV1(ctx context.Context, evts ReadEventV1)
 }
 
 type kafkaProducer struct {
@@ -33,7 +34,18 @@ func (k *kafkaProducer) ProduceReadEvent(ctx context.Context, evt ReadEvent) err
 	return err
 }
 
+// ProduceReadEventV1 批量阅读文章事件(批量方式)
+func (k *kafkaProducer) ProduceReadEventV1(ctx context.Context, evts ReadEventV1) {
+	// TODO implement me
+	panic("implement me")
+}
+
 type ReadEvent struct {
 	Uid int64
 	Aid int64
+}
+
+type ReadEventV1 struct {
+	Uids []int64
+	Aids []int64
 }

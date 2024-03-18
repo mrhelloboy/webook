@@ -24,7 +24,7 @@ func (i *InteractiveReadEventConsumer) Start() error {
 	}
 	go func() {
 		err := cg.Consume(context.Background(),
-			[]string{"article_read"},
+			[]string{"read_article"},
 			saramax.NewHandler[ReadEvent](i.l, i.Consume))
 		if err != nil {
 			i.l.Error("消费循环异常", logger.Error(err))

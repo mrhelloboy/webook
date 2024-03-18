@@ -33,6 +33,6 @@ func NewSyncProducer(client sarama.Client) sarama.SyncProducer {
 	return res
 }
 
-func NewConsumers(InterConsumer *article.InteractiveReadEventConsumer) []events.Consumer {
+func NewConsumers(InterConsumer *article.InteractiveReadEventBatchConsumer) []events.Consumer {
 	return []events.Consumer{InterConsumer}
 }

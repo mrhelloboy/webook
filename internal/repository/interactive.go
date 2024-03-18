@@ -16,18 +16,37 @@ import (
 
 type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
+	BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error
 	IncrLike(ctx context.Context, biz string, bizId int64, uid int64) error
 	DecrLike(ctx context.Context, biz string, bizId int64, uid int64) error
 	AddCollectionItem(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error
 	Get(ctx context.Context, biz string, bizId int64) (domain.Interactive, error)
 	Liked(ctx context.Context, biz string, id int64, uid int64) (bool, error)
 	Collected(ctx context.Context, biz string, bizId int64, uid int64) (bool, error)
+	AddRecord(ctx context.Context, aid int64, uid int64) error
 }
 
 type cachedInteractiveRepo struct {
 	dao   dao.InteractiveDAO
 	cache cache.InteractiveCache
 	l     logger.Logger
+}
+
+// BatchIncrReadCnt 批量增加阅读数
+// bizs 和 bizIds 的长度必须相等，且一一对应
+func (c *cachedInteractiveRepo) BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error {
+	err := c.dao.BatchIncrReadCnt(ctx, bizs, bizIds)
+	if err != nil {
+		return err
+	}
+	// todo: 需要批量的去修改 Redis，所以 lua 脚本需要修改 或者 该用 pipeline
+	// c.cache.IncrReadCntIfPresent()
+	return nil
+}
+
+func (c *cachedInteractiveRepo) AddRecord(ctx context.Context, aid int64, uid int64) error {
+	// TODO implement me
+	panic("implement me")
 }
 
 func NewCachedInteractiveRepo(dao dao.InteractiveDAO, cache cache.InteractiveCache, l logger.Logger) InteractiveRepository {

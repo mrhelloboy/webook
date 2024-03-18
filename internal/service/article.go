@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	events "github.com/mrhelloboy/wehook/internal/events/article"
 
@@ -23,6 +24,12 @@ type articleSvc struct {
 	authorRepo article.AuthorRepository
 	l          logger.Logger
 	producer   events.Producer
+	ch         chan readInfo // 批量方式
+}
+
+type readInfo struct {
+	uid int64
+	aid int64
 }
 
 func NewArticleSvc(authorRepo article.AuthorRepository, l logger.Logger, producer events.Producer) ArticleService {
@@ -33,12 +40,52 @@ func NewArticleSvc(authorRepo article.AuthorRepository, l logger.Logger, produce
 	}
 }
 
+// NewArticleSvcV1 通过批量方式发送阅读事件
+func NewArticleSvcV1(authorRepo article.AuthorRepository, l logger.Logger, producer events.Producer) ArticleService {
+	ch := make(chan readInfo, 10)
+	go func() {
+		for {
+			uids := make([]int64, 0, 10)
+			aids := make([]int64, 0, 10)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			for i := 0; i < 10; i++ {
+				select {
+				case info, ok := <-ch:
+					// !ok 表示 ch 已经关闭了
+					if !ok {
+						cancel()
+						return
+					}
+					uids = append(uids, info.uid)
+					aids = append(aids, info.aid)
+				case <-ctx.Done():
+					break
+				}
+			}
+			cancel()
+			ctx, cancel = context.WithTimeout(context.Background(), time.Second)
+			producer.ProduceReadEventV1(ctx, events.ReadEventV1{
+				Uids: uids,
+				Aids: aids,
+			})
+			cancel()
+		}
+	}()
+	return &articleSvc{
+		authorRepo: authorRepo,
+		producer:   producer,
+		l:          l,
+		ch:         ch,
+	}
+}
+
 func (a *articleSvc) GetPublishedById(ctx context.Context, id int64, uid int64) (domain.Article, error) {
 	art, err := a.authorRepo.GetPublishedById(ctx, id)
 
 	if err == nil {
 		go func() {
 			// 使用消息队列，发送阅读事件，增加阅读数计数
+			// 改进：通过批量来提高性能
 			er := a.producer.ProduceReadEvent(ctx, events.ReadEvent{
 				// 即便消费者要用 art 里面的数据，
 				// 应该让它去查询，不要在 event 里面带
@@ -49,6 +96,14 @@ func (a *articleSvc) GetPublishedById(ctx context.Context, id int64, uid int64) 
 				a.l.Error("发送读者阅读事件失败")
 			}
 		}()
+
+		//go func() {
+		//	// 改批量的做法
+		//	a.ch <- readInfo{
+		//		aid: id,
+		//		uid: uid,
+		//	}
+		//}()
 	}
 	return art, err
 }

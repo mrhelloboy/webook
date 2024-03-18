@@ -21,10 +21,34 @@ type InteractiveDAO interface {
 	Get(ctx context.Context, biz string, bizId int64) (Interactive, error)
 	InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error
 	GetCollectionInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserCollectionBiz, error)
+	BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error
 }
 
 type gormInteractiveDAO struct {
 	db *gorm.DB
+}
+
+// BatchIncrReadCnt 批量增加阅读数
+// 尽管 BatchIncrReadCnt 在循环中逐个调用 IncrReadCnt 方法，
+// 但通过事务管理和数据库内部对批量操作的优化，实现了在批量更新阅读量场景下的高效
+func (g *gormInteractiveDAO) BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error {
+	// 为什么快？
+	// A：十条消息调用十次 IncrReadCnt，
+	// B: 就是批量
+	// 事务本身的开销，A 是 B 的十倍
+	// 刷新 redolog, undolog, binlog 到磁盘，A 是十次，B 是一次
+	return g.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txDAO := NewGormInteractiveDAO(tx)
+		for i := range bizs {
+			err := txDAO.IncrReadCnt(ctx, bizs[i], bizIds[i])
+			if err != nil {
+				// 记下日志
+				// 或者 return err
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 func NewGormInteractiveDAO(db *gorm.DB) InteractiveDAO {

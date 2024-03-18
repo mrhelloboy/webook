@@ -26,7 +26,8 @@ func InitWebServer() *App {
 		ioc.NewConsumers,
 
 		// consumer
-		eventsArt.NewInteractiveReadEventConsumer,
+		// eventsArt.NewInteractiveReadEventConsumer,
+		eventsArt.NewInteractiveReadEventBatchConsumer,
 		// producer
 		eventsArt.NewKafkaProducer,
 
