@@ -33,9 +33,12 @@ type cachedAuthorRepo struct {
 	l        logger.Logger
 }
 
-func NewCachedAuthorRepo(dao daoArt.AuthorDAO) AuthorRepository {
+func NewCachedAuthorRepo(dao daoArt.AuthorDAO, userRepo repository.UserRepository, c cache.ArticleCache, l logger.Logger) AuthorRepository {
 	return &cachedAuthorRepo{
-		dao: dao,
+		dao:      dao,
+		userRepo: userRepo,
+		cache:    c,
+		l:        l,
 	}
 }
 

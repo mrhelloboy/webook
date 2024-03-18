@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 
+	events "github.com/mrhelloboy/wehook/internal/events/article"
+
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/repository/article"
 	"github.com/mrhelloboy/wehook/pkg/logger"
@@ -14,23 +16,41 @@ type ArticleService interface {
 	Withdraw(ctx context.Context, art domain.Article) error
 	List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
-	GetPublishedById(ctx context.Context, id int64) (domain.Article, error)
+	GetPublishedById(ctx context.Context, id int64, uid int64) (domain.Article, error)
 }
 
 type articleSvc struct {
 	authorRepo article.AuthorRepository
 	l          logger.Logger
+	producer   events.Producer
 }
 
-func NewArticleSvc(authorRepo article.AuthorRepository, l logger.Logger) ArticleService {
+func NewArticleSvc(authorRepo article.AuthorRepository, l logger.Logger, producer events.Producer) ArticleService {
 	return &articleSvc{
 		authorRepo: authorRepo,
 		l:          l,
+		producer:   producer,
 	}
 }
 
-func (a *articleSvc) GetPublishedById(ctx context.Context, id int64) (domain.Article, error) {
-	return a.authorRepo.GetPublishedById(ctx, id)
+func (a *articleSvc) GetPublishedById(ctx context.Context, id int64, uid int64) (domain.Article, error) {
+	art, err := a.authorRepo.GetPublishedById(ctx, id)
+
+	if err == nil {
+		go func() {
+			// 使用消息队列，发送阅读事件，增加阅读数计数
+			er := a.producer.ProduceReadEvent(ctx, events.ReadEvent{
+				// 即便消费者要用 art 里面的数据，
+				// 应该让它去查询，不要在 event 里面带
+				Uid: uid,
+				Aid: id,
+			})
+			if er != nil {
+				a.l.Error("发送读者阅读事件失败")
+			}
+		}()
+	}
+	return art, err
 }
 
 func (a *articleSvc) GetById(ctx context.Context, id int64) (domain.Article, error) {

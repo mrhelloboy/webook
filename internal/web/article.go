@@ -1,7 +1,6 @@
 package web
 
 import (
-	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -26,11 +25,12 @@ type ArticleHandler struct {
 	biz      string
 }
 
-func NewArticleHandler(svc service.ArticleService, l logger.Logger) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, l logger.Logger) *ArticleHandler {
 	return &ArticleHandler{
-		svc: svc,
-		l:   l,
-		biz: "article",
+		svc:      svc,
+		interSvc: interSvc,
+		l:        l,
+		biz:      "article",
 	}
 }
 
@@ -93,24 +93,26 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 		a.l.Error("前端输入 ID 有误", logger.Error(err))
 		return
 	}
+	c, ok := ctx.Get("claims")
+	if !ok {
+		ctx.JSON(http.StatusOK, Result{Code: 4, Msg: "参数错误"})
+		return
+	}
+	uc, ok := c.(*ijwt.UserClaims)
+	if !ok {
+		a.l.Error("未发现用户的 session 信息")
+		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
+		return
+	}
 
 	var eg errgroup.Group
 	var art domain.Article
 	eg.Go(func() error {
-		art, err = a.svc.GetPublishedById(ctx, id)
+		art, err = a.svc.GetPublishedById(ctx, id, uc.Id)
 		return err
 	})
 	var intr domain.Interactive
 	eg.Go(func() error {
-		c, ok := ctx.Get("claims")
-		if !ok {
-			return errors.New("无法获取 claims 信息")
-		}
-		uc, ok := c.(*ijwt.UserClaims)
-		if !ok {
-			a.l.Error("未发现用户的 session 信息")
-			return errors.New("未发现用户的 session 信息")
-		}
 		intr, err = a.interSvc.Get(ctx, a.biz, id, uc.Id)
 		// 这里可以容错
 		if err != nil {
@@ -126,12 +128,13 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 	}
 
 	// 添加阅读计数
-	go func() {
-		er := a.interSvc.IncrReadCnt(ctx, a.biz, art.Id)
-		if er != nil {
-			a.l.Error("增加阅读计数失败", logger.Int64("aid", art.Id), logger.Error(er))
-		}
-	}()
+	// 注意：因阅读记录非常频繁，并发量一大，会开启很多的 goroutine，导致有巨大压力
+	//go func() {
+	//	er := a.interSvc.IncrReadCnt(ctx, a.biz, art.Id)
+	//	if er != nil {
+	//		a.l.Error("增加阅读计数失败", logger.Int64("aid", art.Id), logger.Error(er))
+	//	}
+	//}()
 
 	ctx.JSON(http.StatusOK, Result{Data: ArticleVO{
 		Id:         art.Id,

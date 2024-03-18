@@ -120,7 +120,6 @@ func (c *cachedInteractiveRepo) DecrLike(ctx context.Context, biz string, bizId 
 
 func (c *cachedInteractiveRepo) IncrReadCnt(ctx context.Context, biz string, bizId int64) error {
 	// 使用缓存记录阅读数
-	// todo: 阅读计数非常频繁，对数据库的写操作有很大压力，需要优化
 	err := c.dao.IncrReadCnt(ctx, biz, bizId)
 	if err != nil {
 		return err

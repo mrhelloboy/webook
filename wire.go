@@ -3,8 +3,8 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
+	eventsArt "github.com/mrhelloboy/wehook/internal/events/article"
 	"github.com/mrhelloboy/wehook/internal/repository"
 	"github.com/mrhelloboy/wehook/internal/repository/article"
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
@@ -16,16 +16,34 @@ import (
 	"github.com/mrhelloboy/wehook/ioc"
 )
 
-func InitWebServer() *gin.Engine {
+func InitWebServer() *App {
 	wire.Build(
-		ioc.InitDB, ioc.InitRedis,
+		ioc.InitDB,
+		ioc.InitRedis,
 		ioc.InitLogger,
+		ioc.InitKafka,
+		ioc.NewSyncProducer,
+		ioc.NewConsumers,
+
+		// consumer
+		eventsArt.NewInteractiveReadEventConsumer,
+		// producer
+		eventsArt.NewKafkaProducer,
+
 		dao.NewUserDAO, cache.NewUserCache, cache.NewCodeCache,
-		daoArt.NewGormArticleDAO, daoArt.NewGormReaderDAO,
+		daoArt.NewGormArticleDAO,
+		// daoArt.NewGormReaderDAO,
+		dao.NewGormInteractiveDAO,
+
 		repository.NewUserRepository, repository.NewCachedCodeRepository,
-		article.NewCachedAuthorRepo, article.NewCachedReaderRepo,
+		repository.NewCachedInteractiveRepo,
+		article.NewCachedAuthorRepo,
+		// article.NewCachedReaderRepo,
+		cache.NewRedisInteractiveCache,
+		cache.NewRedisArticleCache,
 		service.NewUserSvc, service.NewCodeSvc,
 		service.NewArticleSvc,
+		service.NewInteractiveService,
 		ioc.InitOAuth2WechatService,
 		ioc.InitSMSService,
 		web.NewUserHandler,
@@ -35,6 +53,9 @@ func InitWebServer() *gin.Engine {
 		myjwt.NewRedisJWTHandler,
 		ioc.InitMiddleware,
 		ioc.InitRateLimiterOfMiddleware,
+
+		// 组装 App 这个结构体的所有字段
+		wire.Struct(new(App), "*"),
 	)
-	return new(gin.Engine)
+	return new(App)
 }

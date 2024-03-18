@@ -14,8 +14,17 @@ func main() {
 	initLogger()
 	// initViperRemote()
 	initViper()
-	server := InitWebServer()
-	if err := server.Run(":8080"); err != nil {
+	app := InitWebServer()
+
+	// kafka 在此处进行消费
+	for _, c := range app.consumers {
+		err := c.Start()
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if err := app.web.Run(":8080"); err != nil {
 		panic(err)
 	}
 }
