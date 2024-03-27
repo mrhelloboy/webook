@@ -5,6 +5,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mrhelloboy/wehook/pkg/ginx"
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/metric"
 
 	"github.com/fsnotify/fsnotify"
@@ -31,6 +34,13 @@ func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler, oauth2WechatHdl *w
 }
 
 func InitMiddleware(limiter ratelimit2.Limiter, jwtHdl myjwt.Handler, logger logger.Logger) []gin.HandlerFunc {
+	ginx.InitCounter(prometheus.CounterOpts{
+		Namespace: "geekbang_daming",
+		Subsystem: "webook",
+		Name:      "http_biz_code",
+		Help:      "HTTP 的业务错误码",
+	})
+
 	return []gin.HandlerFunc{
 		// 日志
 		// loggerMiddleware(logger),

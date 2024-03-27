@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/mrhelloboy/wehook/internal/errs"
+
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -231,7 +233,7 @@ func (u *UserHandler) LoginJWT(ctx *gin.Context) {
 
 	user, err := u.svc.Login(ctx, req.Email, req.Password)
 	if errors.Is(err, service.ErrInvalidUserOrPassword) {
-		ctx.String(http.StatusOK, "用户名或者密码不对")
+		ctx.JSON(http.StatusOK, Result{Code: errs.UserInvalidOrPassword, Msg: "用户名不存在或者密码错误"})
 		return
 	}
 	if err != nil {

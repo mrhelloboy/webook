@@ -6,5 +6,6 @@ import (
 )
 
 func InitSMSService() sms.Service {
+	// return metrics.NewPrometheusDecorator(memory.NewService())
 	return memory.NewService()
 }

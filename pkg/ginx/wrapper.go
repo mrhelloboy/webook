@@ -2,13 +2,24 @@ package ginx
 
 import (
 	"net/http"
+	"strconv"
+
+	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/mrhelloboy/wehook/pkg/logger"
 )
 
-var L logger.Logger
+var (
+	L      logger.Logger
+	vector *prometheus.CounterVec
+)
+
+func InitCounter(opt prometheus.CounterOpts) {
+	vector = prometheus.NewCounterVec(opt, []string{"code"})
+	prometheus.MustRegister(vector)
+}
 
 // WrapToken 包装处理函数, 自动解析token
 func WrapToken[C jwt.Claims](fn func(ctx *gin.Context, uc C) (Result, error)) gin.HandlerFunc {
@@ -31,6 +42,7 @@ func WrapToken[C jwt.Claims](fn func(ctx *gin.Context, uc C) (Result, error)) gi
 				logger.Error(err),
 			)
 		}
+		vector.WithLabelValues(strconv.Itoa(res.Code)).Inc()
 		ctx.JSON(http.StatusOK, res)
 	}
 }
