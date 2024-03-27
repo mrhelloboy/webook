@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/metric"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
@@ -52,6 +53,8 @@ func InitMiddleware(limiter ratelimit2.Limiter, jwtHdl myjwt.Handler, logger log
 		jwtMiddleware(jwtHdl),
 		// prometheus 监控
 		prometheusMiddleware(),
+		// otel
+		otelgin.Middleware("webook"),
 	}
 }
 

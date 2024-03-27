@@ -1,8 +1,12 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"net/http"
+	"time"
+
+	"github.com/mrhelloboy/wehook/ioc"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -17,6 +21,7 @@ func main() {
 	initLogger()
 	// initViperRemote()
 	initViper()
+	closeFunc := ioc.InitOTEL()
 	initPrometheus()
 	app := InitWebServer()
 
@@ -31,6 +36,10 @@ func main() {
 	if err := app.web.Run(":8080"); err != nil {
 		panic(err)
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	closeFunc(ctx)
 }
 
 func initLogger() {

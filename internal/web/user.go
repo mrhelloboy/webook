@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/mrhelloboy/wehook/internal/errs"
 
 	regexp "github.com/dlclark/regexp2"
@@ -320,12 +322,14 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 	}
 
 	// 调用 Service 层的注册方法
-	err = u.svc.Signup(ctx, domain.User{
+	err = u.svc.Signup(ctx.Request.Context(), domain.User{
 		Email:    req.Email,
 		Password: req.Password,
 	})
 
 	if errors.Is(err, service.ErrUserDuplicate) {
+		span := trace.SpanFromContext(ctx.Request.Context())
+		span.AddEvent("邮箱冲突")
 		ctx.String(http.StatusOK, "邮箱已存在, 请换一个")
 		return
 	}
