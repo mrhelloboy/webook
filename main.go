@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net/http"
+
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
@@ -14,6 +17,7 @@ func main() {
 	initLogger()
 	// initViperRemote()
 	initViper()
+	initPrometheus()
 	app := InitWebServer()
 
 	// kafka 在此处进行消费
@@ -93,4 +97,14 @@ func initViperRemote() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func initPrometheus() {
+	go func() {
+		http.Handle("/metrics", promhttp.Handler())
+		err := http.ListenAndServe(":8081", nil)
+		if err != nil {
+			panic(err)
+		}
+	}()
 }

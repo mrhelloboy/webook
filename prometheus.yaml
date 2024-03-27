@@ -1,0 +1,15 @@
+scrape_configs:
+  - job_name: "webook"
+    scrape_interval: 5s
+    scrape_timeout: 3s
+    static_configs:
+      # 在Docker容器内部，当需要与宿主机上的某个服务建立通信时，由于默认情况下容器和宿主机之间存在网络隔离，
+      # 直接使用宿主机的IP地址可能不可靠或不可访问。
+      # host.docker.internal 是一个特殊的DNS名称，
+      # 它在Docker for Mac和Docker for Windows中被自动解析为宿主机的IP地址，
+      # 在某些Linux设置下通过特定配置也能支持这个功能。
+      # 因此，当看到 - targets: ["host.docker.internal:8081"] 这样的YAML配置时，
+      # 可以理解为配置了一个目标服务，该服务位于宿主机上且监听在8081端口，
+      # 容器内的应用可以通过这个名字来连接到宿主机上的对应服务
+      # 这是 webook 上的采集数据的端口
+      - targets: [ "host.docker.internal:8081" ]

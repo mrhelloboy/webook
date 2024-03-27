@@ -27,13 +27,11 @@ func NewBatchHandler[T any](l logger.Logger, fn func(msgs []*sarama.ConsumerMess
 }
 
 func (b *BatchHandler[T]) Setup(session sarama.ConsumerGroupSession) error {
-	// TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (b *BatchHandler[T]) Cleanup(session sarama.ConsumerGroupSession) error {
-	// TODO implement me
-	panic("implement me")
+	return nil
 }
 
 func (b *BatchHandler[T]) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {

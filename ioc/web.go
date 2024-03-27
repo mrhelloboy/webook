@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mrhelloboy/wehook/pkg/ginx/middlewares/metric"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -24,20 +26,33 @@ func InitGin(mws []gin.HandlerFunc, userhdr *web.UserHandler, oauth2WechatHdl *w
 	userhdr.RegisterRouters(server)
 	oauth2WechatHdl.RegisterRouters(server)
 	articleHdl.RegisterRouters(server)
+	(&web.ObservabilityHandler{}).RegisterRouters(server)
 	return server
 }
 
 func InitMiddleware(limiter ratelimit2.Limiter, jwtHdl myjwt.Handler, logger logger.Logger) []gin.HandlerFunc {
 	return []gin.HandlerFunc{
 		// 日志
-		loggerMiddleware(logger),
+		// loggerMiddleware(logger),
 		// 限流
 		rateLimitMiddleware(limiter),
 		// 跨域
 		corsMiddleware(),
 		// JWT
 		jwtMiddleware(jwtHdl),
+		// prometheus 监控
+		prometheusMiddleware(),
 	}
+}
+
+func prometheusMiddleware() gin.HandlerFunc {
+	bd := metric.NewBuilder(
+		"geekbang_daming",
+		"webook",
+		"gin_http",
+		"统计 GIN 的 HTTP 接口",
+		"my-instance-1")
+	return bd.Build()
 }
 
 func loggerMiddleware(l logger.Logger) gin.HandlerFunc {
@@ -89,5 +104,6 @@ func jwtMiddleware(jwtHdl myjwt.Handler) gin.HandlerFunc {
 		IgnorePath("/user/refresh_token").
 		IgnorePath("/oauth2/wechat/authurl").
 		IgnorePath("/oauth2/wechat/callback").
+		IgnorePath("/test/metric").
 		Build()
 }
