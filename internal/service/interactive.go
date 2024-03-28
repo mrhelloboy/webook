@@ -21,6 +21,7 @@ type InteractiveService interface {
 	CancelLike(ctx context.Context, biz string, id int64, uid int64) error
 	Collect(ctx context.Context, biz string, bizId, cid, uid int64) error
 	Get(ctx context.Context, biz string, bizId, uid int64) (domain.Interactive, error)
+	GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error)
 }
 
 type interactiveSrv struct {
@@ -33,6 +34,11 @@ func NewInteractiveService(interRepo repository.InteractiveRepository, l logger.
 		interRepo: interRepo,
 		l:         l,
 	}
+}
+
+func (i *interactiveSrv) GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
+	// TODO implement me
+	panic("implement me")
 }
 
 func (i *interactiveSrv) Collect(ctx context.Context, biz string, bizId, cid, uid int64) error {

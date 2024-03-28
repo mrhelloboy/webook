@@ -83,6 +83,21 @@ func (mr *MockInteractiveServiceMockRecorder) Get(ctx, biz, bizId, uid any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockInteractiveService)(nil).Get), ctx, biz, bizId, uid)
 }
 
+// GetByIds mocks base method.
+func (m *MockInteractiveService) GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetByIds", ctx, biz, bizIds)
+	ret0, _ := ret[0].(map[int64]domain.Interactive)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetByIds indicates an expected call of GetByIds.
+func (mr *MockInteractiveServiceMockRecorder) GetByIds(ctx, biz, bizIds any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByIds", reflect.TypeOf((*MockInteractiveService)(nil).GetByIds), ctx, biz, bizIds)
+}
+
 // IncrReadCnt mocks base method.
 func (m *MockInteractiveService) IncrReadCnt(ctx context.Context, biz string, bizId int64) error {
 	m.ctrl.T.Helper()

@@ -7,6 +7,7 @@ import (
 	"github.com/IBM/sarama"
 )
 
+//go:generate mockgen -source=producer.go -destination=mocks/producer.mock.go -package=evtArtMock Producer
 type Producer interface {
 	ProduceReadEvent(ctx context.Context, evt ReadEvent) error
 	ProduceReadEventV1(ctx context.Context, evts ReadEventV1)

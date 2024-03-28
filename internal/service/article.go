@@ -11,11 +11,13 @@ import (
 	"github.com/mrhelloboy/wehook/pkg/logger"
 )
 
+//go:generate mockgen -source=article.go -package=svcmocks -destination=mocks/article.mock.go ArticleService
 type ArticleService interface {
 	Save(ctx context.Context, art domain.Article) (int64, error)
 	Publish(ctx context.Context, art domain.Article) (int64, error)
 	Withdraw(ctx context.Context, art domain.Article) error
 	List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
+	ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
 	GetPublishedById(ctx context.Context, id int64, uid int64) (domain.Article, error)
 }
@@ -77,6 +79,12 @@ func NewArticleSvcV1(authorRepo article.AuthorRepository, l logger.Logger, produ
 		l:          l,
 		ch:         ch,
 	}
+}
+
+// ListPub 获取作者发布的文章列表（只取 start 7 天内的）
+func (a *articleSvc) ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error) {
+	// TODO implement me
+	panic("implement me")
 }
 
 func (a *articleSvc) GetPublishedById(ctx context.Context, id int64, uid int64) (domain.Article, error) {

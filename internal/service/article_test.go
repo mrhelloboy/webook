@@ -5,6 +5,8 @@ import (
 	"errors"
 	"testing"
 
+	evtArtMock "github.com/mrhelloboy/wehook/internal/events/article/mocks"
+
 	repomocks "github.com/mrhelloboy/wehook/internal/repository/article/mocks"
 
 	"github.com/mrhelloboy/wehook/pkg/logger"
@@ -193,8 +195,9 @@ func Test_articleSvc_Publish(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 
-			author, reader := tc.mock(ctrl)
-			svc := NewArticleSvc(author, reader, &logger.NopLogger{})
+			author, _ := tc.mock(ctrl)
+
+			svc := NewArticleSvc(author, &logger.NopLogger{}, evtArtMock.NewMockProducer(ctrl))
 			id, err := svc.Publish(context.Background(), tc.art)
 			assert.Equal(t, tc.wantErr, err)
 			assert.Equal(t, tc.wantId, id)
