@@ -2,9 +2,10 @@ package service
 
 import (
 	"context"
-	"log"
 	"math"
 	"time"
+
+	"github.com/mrhelloboy/wehook/internal/repository"
 
 	"github.com/ecodeclub/ekit/queue"
 	"github.com/ecodeclub/ekit/slice"
@@ -19,15 +20,17 @@ type RankingService interface {
 type BatchRankingSrv struct {
 	artSvc    ArticleService
 	intrSvc   InteractiveService
+	repo      repository.RankingRepository
 	batchSize int
 	n         int
 	scoreFunc func(t time.Time, likeCnt int64) float64 // 不能返回负数
 }
 
-func NewBatchRankingSrv(artSvc ArticleService, intrSvc InteractiveService) *BatchRankingSrv {
+func NewBatchRankingSrv(artSvc ArticleService, intrSvc InteractiveService, repo repository.RankingRepository) RankingService {
 	return &BatchRankingSrv{
 		artSvc:    artSvc,
 		intrSvc:   intrSvc,
+		repo:      repo,
 		batchSize: 100,
 		n:         100,
 		scoreFunc: func(t time.Time, likeCnt int64) float64 {
@@ -44,9 +47,7 @@ func (s *BatchRankingSrv) TopN(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	// todo：将数据存起来
-	log.Println(arts)
-	return nil
+	return s.repo.ReplaceTopN(ctx, arts)
 }
 
 func (s *BatchRankingSrv) topN(ctx context.Context) ([]domain.Article, error) {
@@ -95,7 +96,7 @@ func (s *BatchRankingSrv) topN(ctx context.Context) ([]domain.Article, error) {
 			if err == queue.ErrOutOfCapacity {
 				val, _ := topN.Dequeue()
 				if val.score < score {
-					err = topN.Enqueue(Score{art: art, score: score})
+					_ = topN.Enqueue(Score{art: art, score: score})
 				} else {
 					_ = topN.Enqueue(val)
 				}
@@ -103,8 +104,9 @@ func (s *BatchRankingSrv) topN(ctx context.Context) ([]domain.Article, error) {
 		}
 
 		// 处理完一批数据，要不要进入下一批？
-		if len(arts) < s.batchSize {
+		if len(arts) < s.batchSize || now.Sub(arts[len(arts)-1].Utime).Hours() > 7*24 {
 			// 这一批都没有取够，当前肯定没有下一批了
+			// 或者已经取到了7天之前的数据了，说明可以中断了
 			break
 		}
 		offset = offset + len(arts)

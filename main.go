@@ -33,13 +33,26 @@ func main() {
 		}
 	}
 
+	// 启动定时任务
+	app.cron.Start()
+
 	if err := app.web.Run(":8080"); err != nil {
 		panic(err)
 	}
 
+	// 关闭 otel
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	closeFunc(ctx)
+
+	// 关停定时任务
+	ctx = app.cron.Stop()
+	// 考虑超时强制退出，防止有些任务执行特别长的时间
+	tm := time.NewTimer(time.Minute * 10)
+	select {
+	case <-tm.C:
+	case <-ctx.Done():
+	}
 }
 
 func initLogger() {

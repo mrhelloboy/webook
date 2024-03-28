@@ -22,6 +22,7 @@ type AuthorRepository interface {
 	Sync(ctx context.Context, art domain.Article) (int64, error)
 	SyncStatus(ctx context.Context, id int64, author int64, status domain.ArticleStatus) error
 	List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
+	ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]domain.Article, error)
 	GetById(ctx context.Context, id int64) (domain.Article, error)
 	GetPublishedById(ctx context.Context, id int64) (domain.Article, error)
 }
@@ -40,6 +41,16 @@ func NewCachedAuthorRepo(dao daoArt.AuthorDAO, userRepo repository.UserRepositor
 		cache:    c,
 		l:        l,
 	}
+}
+
+func (c *cachedAuthorRepo) ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]domain.Article, error) {
+	res, err := c.dao.ListPub(ctx, start, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+	return slice.Map(res, func(idx int, src daoArt.Article) domain.Article {
+		return c.toDomain(src)
+	}), nil
 }
 
 func (c *cachedAuthorRepo) Update(ctx context.Context, art domain.Article) error {

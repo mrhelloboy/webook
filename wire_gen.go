@@ -7,6 +7,7 @@
 package main
 
 import (
+	"github.com/google/wire"
 	article3 "github.com/mrhelloboy/wehook/internal/events/article"
 	"github.com/mrhelloboy/wehook/internal/repository"
 	article2 "github.com/mrhelloboy/wehook/internal/repository/article"
@@ -58,9 +59,23 @@ func InitWebServer() *App {
 	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler, articleHandler)
 	interactiveReadEventBatchConsumer := article3.NewInteractiveReadEventBatchConsumer(client, interactiveRepository, logger)
 	v2 := ioc.NewConsumers(interactiveReadEventBatchConsumer)
+	rankingRedisCache := cache.NewRankingRedisCache(cmdable)
+	rankingLocalCache := cache.NewRankingLocalCache()
+	rankingRepository := repository.NewCachedRankingRepo(rankingRedisCache, rankingLocalCache)
+	rankingService := service.NewBatchRankingSrv(articleService, interactiveService, rankingRepository)
+	rlockClient := ioc.InitRLockClient(cmdable)
+	rankingJob := ioc.InitRankingJob(rankingService, rlockClient, logger)
+	cron := ioc.InitJobs(logger, rankingJob)
 	app := &App{
 		web:       engine,
 		consumers: v2,
+		cron:      cron,
 	}
 	return app
 }
+
+// wire.go:
+
+var interactiveSvcProvider = wire.NewSet(service.NewInteractiveService, repository.NewCachedInteractiveRepo, dao.NewGormInteractiveDAO, cache.NewRedisInteractiveCache)
+
+var rankingSvcProvider = wire.NewSet(service.NewBatchRankingSrv, repository.NewCachedRankingRepo, cache.NewRankingRedisCache, cache.NewRankingLocalCache)

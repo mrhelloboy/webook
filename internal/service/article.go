@@ -81,10 +81,10 @@ func NewArticleSvcV1(authorRepo article.AuthorRepository, l logger.Logger, produ
 	}
 }
 
-// ListPub 获取作者发布的文章列表（只取 start 7 天内的）
+// ListPub 获取作者发布的文章列表
 func (a *articleSvc) ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error) {
-	// TODO implement me
-	panic("implement me")
+	// 根据 start 时间来查询
+	return a.authorRepo.ListPub(ctx, start, offset, limit)
 }
 
 func (a *articleSvc) GetPublishedById(ctx context.Context, id int64, uid int64) (domain.Article, error) {

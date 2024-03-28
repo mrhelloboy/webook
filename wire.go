@@ -16,6 +16,20 @@ import (
 	"github.com/mrhelloboy/wehook/ioc"
 )
 
+var interactiveSvcProvider = wire.NewSet(
+	service.NewInteractiveService,
+	repository.NewCachedInteractiveRepo,
+	dao.NewGormInteractiveDAO,
+	cache.NewRedisInteractiveCache,
+)
+
+var rankingSvcProvider = wire.NewSet(
+	service.NewBatchRankingSrv,
+	repository.NewCachedRankingRepo,
+	cache.NewRankingRedisCache,
+	cache.NewRankingLocalCache,
+)
+
 func InitWebServer() *App {
 	wire.Build(
 		ioc.InitDB,
@@ -24,6 +38,12 @@ func InitWebServer() *App {
 		ioc.InitKafka,
 		ioc.NewSyncProducer,
 		ioc.NewConsumers,
+
+		interactiveSvcProvider,
+		rankingSvcProvider,
+		ioc.InitRLockClient,
+		ioc.InitJobs,
+		ioc.InitRankingJob,
 
 		// consumer
 		// eventsArt.NewInteractiveReadEventConsumer,
@@ -34,17 +54,17 @@ func InitWebServer() *App {
 		dao.NewUserDAO, cache.NewUserCache, cache.NewCodeCache,
 		daoArt.NewGormArticleDAO,
 		// daoArt.NewGormReaderDAO,
-		dao.NewGormInteractiveDAO,
+		// dao.NewGormInteractiveDAO,
 
 		repository.NewUserRepository, repository.NewCachedCodeRepository,
-		repository.NewCachedInteractiveRepo,
+		// repository.NewCachedInteractiveRepo,
 		article.NewCachedAuthorRepo,
 		// article.NewCachedReaderRepo,
-		cache.NewRedisInteractiveCache,
+		// cache.NewRedisInteractiveCache,
 		cache.NewRedisArticleCache,
 		service.NewUserSvc, service.NewCodeSvc,
 		service.NewArticleSvc,
-		service.NewInteractiveService,
+		// service.NewInteractiveService,
 		ioc.InitOAuth2WechatService,
 		ioc.InitSMSService,
 		web.NewUserHandler,

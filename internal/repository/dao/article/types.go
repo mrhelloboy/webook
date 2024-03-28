@@ -1,6 +1,9 @@
 package article
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type AuthorDAO interface {
 	GetByAuthor(ctx context.Context, author int64, offset, limit int) ([]Article, error)
@@ -11,6 +14,7 @@ type AuthorDAO interface {
 	Sync(ctx context.Context, art Article) (int64, error)
 	// upsert(ctx context.Context, art PublishedArticle) error
 	SyncStatus(ctx context.Context, id int64, author int64, status uint8) error
+	ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]Article, error)
 }
 
 type ReaderDAO interface {

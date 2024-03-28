@@ -1,6 +1,7 @@
 package ioc
 
 import (
+	rlock "github.com/gotomicro/redis-lock"
 	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
@@ -10,7 +11,7 @@ func InitRedis() redis.Cmdable {
 		Addr string `yaml:"addr"`
 	}
 	// 配置默认值
-	var cfg = Config{
+	cfg := Config{
 		Addr: "localhost:6379",
 	}
 	err := viper.UnmarshalKey("redis", &cfg)
@@ -25,4 +26,9 @@ func InitRedis() redis.Cmdable {
 	})
 
 	return redisClient
+}
+
+// InitRLockClient 初始化分布式锁客户端
+func InitRLockClient(cmd redis.Cmdable) *rlock.Client {
+	return rlock.NewClient(cmd)
 }
