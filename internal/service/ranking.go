@@ -24,6 +24,7 @@ type BatchRankingSrv struct {
 	batchSize int
 	n         int
 	scoreFunc func(t time.Time, likeCnt int64) float64 // 不能返回负数
+	load      int64                                    // 负载
 }
 
 func NewBatchRankingSrv(artSvc ArticleService, intrSvc InteractiveService, repo repository.RankingRepository) RankingService {
@@ -34,7 +35,7 @@ func NewBatchRankingSrv(artSvc ArticleService, intrSvc InteractiveService, repo 
 		batchSize: 100,
 		n:         100,
 		scoreFunc: func(t time.Time, likeCnt int64) float64 {
-			// 假设likeCnt是点赞数，t是文章发布时间
+			// 假设 likeCnt 是点赞数，t 是文章发布时间
 			// 可以根据需要定义自己的评分函数
 			sec := time.Since(t).Seconds()
 			return float64(likeCnt-1) / math.Pow(sec+2, 1.5)
@@ -51,7 +52,7 @@ func (s *BatchRankingSrv) TopN(ctx context.Context) error {
 }
 
 func (s *BatchRankingSrv) topN(ctx context.Context) ([]domain.Article, error) {
-	// 只取7天内的数据
+	// 只取 7 天内的数据
 	now := time.Now()
 	// 先拿一批数据
 	offset := 0
@@ -89,7 +90,7 @@ func (s *BatchRankingSrv) topN(ctx context.Context) ([]domain.Article, error) {
 		for _, art := range arts {
 			intr := intrs[art.Id]
 			score := s.scoreFunc(art.Utime, intr.LikeCnt)
-			// 考虑这个score在不在前100名内
+			// 考虑这个 score 在不在前 100 名内
 			// 拿到热度最低的
 			err = topN.Enqueue(Score{art: art, score: score})
 			// 这种写法，要求 topN 已经满了
@@ -106,7 +107,7 @@ func (s *BatchRankingSrv) topN(ctx context.Context) ([]domain.Article, error) {
 		// 处理完一批数据，要不要进入下一批？
 		if len(arts) < s.batchSize || now.Sub(arts[len(arts)-1].Utime).Hours() > 7*24 {
 			// 这一批都没有取够，当前肯定没有下一批了
-			// 或者已经取到了7天之前的数据了，说明可以中断了
+			// 或者已经取到了 7 天之前的数据了，说明可以中断了
 			break
 		}
 		offset = offset + len(arts)
@@ -117,7 +118,7 @@ func (s *BatchRankingSrv) topN(ctx context.Context) ([]domain.Article, error) {
 	for i := s.n - 1; i >= 0; i-- {
 		val, err := topN.Dequeue()
 		if err != nil {
-			// 说明取完了，不够n
+			// 说明取完了，不够 n
 			break
 		}
 		res[i] = val.art
