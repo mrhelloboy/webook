@@ -8,6 +8,11 @@ package main
 
 import (
 	"github.com/google/wire"
+	"github.com/mrhelloboy/wehook/interactive/events"
+	repository2 "github.com/mrhelloboy/wehook/interactive/repository"
+	cache2 "github.com/mrhelloboy/wehook/interactive/repository/cache"
+	dao2 "github.com/mrhelloboy/wehook/interactive/repository/dao"
+	service2 "github.com/mrhelloboy/wehook/interactive/service"
 	article3 "github.com/mrhelloboy/wehook/internal/events/article"
 	"github.com/mrhelloboy/wehook/internal/repository"
 	article2 "github.com/mrhelloboy/wehook/internal/repository/article"
@@ -51,13 +56,13 @@ func InitWebServer() *App {
 	syncProducer := ioc.NewSyncProducer(client)
 	producer := article3.NewKafkaProducer(syncProducer)
 	articleService := service.NewArticleSvc(authorRepository, logger, producer)
-	interactiveDAO := dao.NewGormInteractiveDAO(db)
-	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
-	interactiveRepository := repository.NewCachedInteractiveRepo(interactiveDAO, interactiveCache, logger)
-	interactiveService := service.NewInteractiveService(interactiveRepository, logger)
+	interactiveDAO := dao2.NewGormInteractiveDAO(db)
+	interactiveCache := cache2.NewRedisInteractiveCache(cmdable)
+	interactiveRepository := repository2.NewCachedInteractiveRepo(interactiveDAO, interactiveCache, logger)
+	interactiveService := service2.NewInteractiveService(interactiveRepository, logger)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService, logger)
 	engine := ioc.InitGin(v, userHandler, oAuth2WechatHandler, articleHandler)
-	interactiveReadEventBatchConsumer := article3.NewInteractiveReadEventBatchConsumer(client, interactiveRepository, logger)
+	interactiveReadEventBatchConsumer := events.NewInteractiveReadEventBatchConsumer(client, interactiveRepository, logger)
 	v2 := ioc.NewConsumers(interactiveReadEventBatchConsumer)
 	rankingRedisCache := cache.NewRankingRedisCache(cmdable)
 	rankingLocalCache := cache.NewRankingLocalCache()
@@ -76,6 +81,6 @@ func InitWebServer() *App {
 
 // wire.go:
 
-var interactiveSvcProvider = wire.NewSet(service.NewInteractiveService, repository.NewCachedInteractiveRepo, dao.NewGormInteractiveDAO, cache.NewRedisInteractiveCache)
+var interactiveSvcProvider = wire.NewSet(service2.NewInteractiveService, repository2.NewCachedInteractiveRepo, dao2.NewGormInteractiveDAO, cache2.NewRedisInteractiveCache)
 
 var rankingSvcProvider = wire.NewSet(service.NewBatchRankingSrv, repository.NewCachedRankingRepo, cache.NewRankingRedisCache, cache.NewRankingLocalCache)

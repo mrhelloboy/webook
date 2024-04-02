@@ -5,6 +5,9 @@ import (
 	"strconv"
 	"time"
 
+	domain2 "github.com/mrhelloboy/wehook/interactive/domain"
+	service2 "github.com/mrhelloboy/wehook/interactive/service"
+
 	"golang.org/x/sync/errgroup"
 
 	"github.com/mrhelloboy/wehook/internal/domain"
@@ -20,12 +23,12 @@ var _ Handler = (*ArticleHandler)(nil)
 
 type ArticleHandler struct {
 	svc      service.ArticleService
-	interSvc service.InteractiveService
+	interSvc service2.InteractiveService
 	l        logger.Logger
 	biz      string
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, l logger.Logger) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service2.InteractiveService, l logger.Logger) *ArticleHandler {
 	return &ArticleHandler{
 		svc:      svc,
 		interSvc: interSvc,
@@ -111,7 +114,7 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 		art, err = a.svc.GetPublishedById(ctx, id, uc.Id)
 		return err
 	})
-	var intr domain.Interactive
+	var intr domain2.Interactive
 	eg.Go(func() error {
 		intr, err = a.interSvc.Get(ctx, a.biz, id, uc.Id)
 		// 这里可以容错

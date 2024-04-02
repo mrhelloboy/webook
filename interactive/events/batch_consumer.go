@@ -1,13 +1,13 @@
-package article
+package events
 
 import (
 	"context"
 	"time"
 
+	"github.com/mrhelloboy/wehook/interactive/repository"
 	"github.com/mrhelloboy/wehook/pkg/saramax"
 
 	"github.com/IBM/sarama"
-	"github.com/mrhelloboy/wehook/internal/repository"
 	"github.com/mrhelloboy/wehook/pkg/logger"
 )
 

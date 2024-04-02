@@ -15,23 +15,30 @@ var ErrRecordNotFound = gorm.ErrRecordNotFound
 
 type InteractiveDAO interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
-	InsertLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) error
-	GetLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserLikeBiz, error)
-	DeleteLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) error
+	InsertLikeInfo(ctx context.Context, biz string, bizId, uid int64) error
+	GetLikeInfo(ctx context.Context, biz string, bizId, uid int64) (UserLikeBiz, error)
+	DeleteLikeInfo(ctx context.Context, biz string, bizId, uid int64) error
 	Get(ctx context.Context, biz string, bizId int64) (Interactive, error)
 	InsertCollectionBiz(ctx context.Context, cb UserCollectionBiz) error
-	GetCollectionInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserCollectionBiz, error)
-	BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error
+	GetCollectionInfo(ctx context.Context, biz string, bizId, uid int64) (UserCollectionBiz, error)
+	BatchIncrReadCnt(ctx context.Context, bizs []string, ids []int64) error
+	GetByIds(ctx context.Context, biz string, ids []int64) ([]Interactive, error)
 }
 
 type gormInteractiveDAO struct {
 	db *gorm.DB
 }
 
+func (g *gormInteractiveDAO) GetByIds(ctx context.Context, biz string, ids []int64) ([]Interactive, error) {
+	var res []Interactive
+	err := g.db.WithContext(ctx).Where("biz = ? AND id IN ?", biz, ids).Find(&res).Error
+	return res, err
+}
+
 // BatchIncrReadCnt 批量增加阅读数
 // 尽管 BatchIncrReadCnt 在循环中逐个调用 IncrReadCnt 方法，
 // 但通过事务管理和数据库内部对批量操作的优化，实现了在批量更新阅读量场景下的高效
-func (g *gormInteractiveDAO) BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error {
+func (g *gormInteractiveDAO) BatchIncrReadCnt(ctx context.Context, bizs []string, ids []int64) error {
 	// 为什么快？
 	// A：十条消息调用十次 IncrReadCnt，
 	// B: 就是批量
@@ -40,7 +47,7 @@ func (g *gormInteractiveDAO) BatchIncrReadCnt(ctx context.Context, bizs []string
 	return g.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		txDAO := NewGormInteractiveDAO(tx)
 		for i := range bizs {
-			err := txDAO.IncrReadCnt(ctx, bizs[i], bizIds[i])
+			err := txDAO.IncrReadCnt(ctx, bizs[i], ids[i])
 			if err != nil {
 				// 记下日志
 				// 或者 return err

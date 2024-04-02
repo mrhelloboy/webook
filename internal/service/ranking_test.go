@@ -5,11 +5,12 @@ import (
 	"testing"
 	"time"
 
-	svcmocks "github.com/mrhelloboy/wehook/internal/service/mocks"
+	domain2 "github.com/mrhelloboy/wehook/interactive/domain"
 
-	"github.com/stretchr/testify/assert"
-
+	"github.com/mrhelloboy/wehook/interactive/service"
 	"github.com/mrhelloboy/wehook/internal/domain"
+	svcmocks "github.com/mrhelloboy/wehook/internal/service/mocks"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/mock/gomock"
 )
 
@@ -17,13 +18,13 @@ func TestBatchRankingSrv_TopN(t *testing.T) {
 	now := time.Now()
 	testCases := []struct {
 		name     string
-		mock     func(ctrl *gomock.Controller) (ArticleService, InteractiveService)
+		mock     func(ctrl *gomock.Controller) (ArticleService, service.InteractiveService)
 		wantErr  error
 		wantArts []domain.Article
 	}{
 		{
 			name: "计算成功",
-			mock: func(ctrl *gomock.Controller) (ArticleService, InteractiveService) {
+			mock: func(ctrl *gomock.Controller) (ArticleService, service.InteractiveService) {
 				artSvc := svcmocks.NewMockArticleService(ctrl)
 				artSvc.EXPECT().ListPub(gomock.Any(), gomock.Any(), 0, 3).Return([]domain.Article{
 					{Id: 1, Utime: now, Ctime: now},
@@ -32,12 +33,12 @@ func TestBatchRankingSrv_TopN(t *testing.T) {
 				}, nil)
 				artSvc.EXPECT().ListPub(gomock.Any(), gomock.Any(), 3, 3).Return([]domain.Article{}, nil)
 				intrSvc := svcmocks.NewMockInteractiveService(ctrl)
-				intrSvc.EXPECT().GetByIds(gomock.Any(), "article", []int64{1, 2, 3}).Return(map[int64]domain.Interactive{
+				intrSvc.EXPECT().GetByIds(gomock.Any(), "article", []int64{1, 2, 3}).Return(map[int64]domain2.Interactive{
 					1: {BizId: 1, LikeCnt: 1},
 					2: {BizId: 2, LikeCnt: 2},
 					3: {BizId: 3, LikeCnt: 3},
 				}, nil)
-				intrSvc.EXPECT().GetByIds(gomock.Any(), "article", []int64{}).Return(map[int64]domain.Interactive{}, nil)
+				intrSvc.EXPECT().GetByIds(gomock.Any(), "article", []int64{}).Return(map[int64]domain2.Interactive{}, nil)
 				return artSvc, intrSvc
 			},
 			wantArts: []domain.Article{
@@ -52,7 +53,7 @@ func TestBatchRankingSrv_TopN(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
 			artSvc, intrSvc := tc.mock(ctrl)
-			svc := NewBatchRankingSrv(artSvc, intrSvc)
+			svc := NewBatchRankingSrv(artSvc, intrSvc, nil).(*BatchRankingSrv)
 			// 为了方便测试，修改batchSize，n 和 scoreFunc
 			svc.batchSize = 3
 			svc.n = 3

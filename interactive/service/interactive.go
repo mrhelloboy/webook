@@ -3,18 +3,16 @@ package service
 import (
 	"context"
 
-	"golang.org/x/sync/errgroup"
-
+	"github.com/mrhelloboy/wehook/interactive/domain"
+	"github.com/mrhelloboy/wehook/interactive/repository"
 	"github.com/mrhelloboy/wehook/pkg/logger"
 
-	"github.com/mrhelloboy/wehook/internal/domain"
-
-	"github.com/mrhelloboy/wehook/internal/repository"
+	"golang.org/x/sync/errgroup"
 )
 
+// InteractiveService 交互服务 ( 点赞、收藏、阅读记录等）
+//
 //go:generate mockgen -source=./interactive.go -package=svcmocks -destination=mocks/interactive.mock.go InteractiveService
-
-// InteractiveService 交互服务(点赞、收藏、阅读记录等）
 type InteractiveService interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	Like(ctx context.Context, biz string, id int64, uid int64) error
@@ -37,8 +35,15 @@ func NewInteractiveService(interRepo repository.InteractiveRepository, l logger.
 }
 
 func (i *interactiveSrv) GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
-	// TODO implement me
-	panic("implement me")
+	intrs, err := i.interRepo.GetByIds(ctx, biz, bizIds)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[int64]domain.Interactive, len(intrs))
+	for _, intr := range intrs {
+		res[intr.BizId] = intr
+	}
+	return res, nil
 }
 
 func (i *interactiveSrv) Collect(ctx context.Context, biz string, bizId, cid, uid int64) error {

@@ -5,6 +5,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/mrhelloboy/wehook/interactive/service"
+
 	"github.com/mrhelloboy/wehook/internal/repository"
 
 	"github.com/ecodeclub/ekit/queue"
@@ -19,7 +21,7 @@ type RankingService interface {
 
 type BatchRankingSrv struct {
 	artSvc    ArticleService
-	intrSvc   InteractiveService
+	intrSvc   service.InteractiveService
 	repo      repository.RankingRepository
 	batchSize int
 	n         int
@@ -27,7 +29,7 @@ type BatchRankingSrv struct {
 	load      int64                                    // 负载
 }
 
-func NewBatchRankingSrv(artSvc ArticleService, intrSvc InteractiveService, repo repository.RankingRepository) RankingService {
+func NewBatchRankingSrv(artSvc ArticleService, intrSvc service.InteractiveService, repo repository.RankingRepository) RankingService {
 	return &BatchRankingSrv{
 		artSvc:    artSvc,
 		intrSvc:   intrSvc,

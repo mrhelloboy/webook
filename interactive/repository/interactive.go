@@ -3,27 +3,26 @@ package repository
 import (
 	"context"
 
+	"github.com/ecodeclub/ekit/slice"
+
+	"github.com/mrhelloboy/wehook/interactive/domain"
+	"github.com/mrhelloboy/wehook/interactive/repository/cache"
+	"github.com/mrhelloboy/wehook/interactive/repository/dao"
 	"github.com/mrhelloboy/wehook/pkg/logger"
-
-	"github.com/mrhelloboy/wehook/internal/domain"
-
-	"github.com/mrhelloboy/wehook/internal/repository/cache"
-
-	"github.com/mrhelloboy/wehook/internal/repository/dao"
 )
 
 //go:generate mockgen -source=./interactive.go -package=repomocks -destination=mocks/interactive.mock.go InteractiveRepository
-
 type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
+	// BatchIncrReadCnt 这里调用者要保证 bizs 和 bizIds 长度一样
 	BatchIncrReadCnt(ctx context.Context, bizs []string, bizIds []int64) error
-	IncrLike(ctx context.Context, biz string, bizId int64, uid int64) error
-	DecrLike(ctx context.Context, biz string, bizId int64, uid int64) error
-	AddCollectionItem(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error
+	IncrLike(ctx context.Context, biz string, bizId, uid int64) error
+	DecrLike(ctx context.Context, biz string, bizId, uid int64) error
+	AddCollectionItem(ctx context.Context, biz string, bizId, cid int64, uid int64) error
 	Get(ctx context.Context, biz string, bizId int64) (domain.Interactive, error)
 	Liked(ctx context.Context, biz string, id int64, uid int64) (bool, error)
-	Collected(ctx context.Context, biz string, bizId int64, uid int64) (bool, error)
-	AddRecord(ctx context.Context, aid int64, uid int64) error
+	Collected(ctx context.Context, biz string, id int64, uid int64) (bool, error)
+	GetByIds(ctx context.Context, biz string, ids []int64) ([]domain.Interactive, error)
 }
 
 type cachedInteractiveRepo struct {
@@ -44,9 +43,14 @@ func (c *cachedInteractiveRepo) BatchIncrReadCnt(ctx context.Context, bizs []str
 	return nil
 }
 
-func (c *cachedInteractiveRepo) AddRecord(ctx context.Context, aid int64, uid int64) error {
-	// TODO implement me
-	panic("implement me")
+func (c *cachedInteractiveRepo) GetByIds(ctx context.Context, biz string, ids []int64) ([]domain.Interactive, error) {
+	vals, err := c.dao.GetByIds(ctx, biz, ids)
+	if err != nil {
+		return nil, err
+	}
+	return slice.Map[dao.Interactive, domain.Interactive](vals, func(idx int, src dao.Interactive) domain.Interactive {
+		return c.toDomain(src)
+	}), nil
 }
 
 func NewCachedInteractiveRepo(dao dao.InteractiveDAO, cache cache.InteractiveCache, l logger.Logger) InteractiveRepository {
@@ -101,7 +105,7 @@ func (c *cachedInteractiveRepo) Liked(ctx context.Context, biz string, id int64,
 	case nil:
 		return true, nil
 	case dao.ErrRecordNotFound:
-		return false, err
+		return false, nil
 	default:
 		return false, err
 	}
@@ -114,7 +118,7 @@ func (c *cachedInteractiveRepo) Collected(ctx context.Context, biz string, bizId
 	case nil:
 		return true, nil
 	case dao.ErrRecordNotFound:
-		return false, err
+		return false, nil
 	default:
 		return false, err
 	}
@@ -149,6 +153,7 @@ func (c *cachedInteractiveRepo) IncrReadCnt(ctx context.Context, biz string, biz
 
 func (c *cachedInteractiveRepo) toDomain(intr dao.Interactive) domain.Interactive {
 	return domain.Interactive{
+		BizId:      intr.BizId,
 		LikeCnt:    intr.LikeCnt,
 		CollectCnt: intr.CollectCnt,
 		ReadCnt:    intr.ReadCnt,

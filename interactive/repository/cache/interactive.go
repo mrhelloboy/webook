@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/mrhelloboy/wehook/internal/domain"
+	"github.com/mrhelloboy/wehook/interactive/domain"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -57,6 +57,7 @@ func (r *redisInteractiveCache) Get(ctx context.Context, biz string, bizId int64
 	collectCnt, _ := strconv.ParseInt(data[fieldCollectCnt], 10, 64)
 
 	return domain.Interactive{
+		BizId:      bizId,
 		ReadCnt:    readCnt,
 		LikeCnt:    likeCnt,
 		CollectCnt: collectCnt,

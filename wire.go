@@ -4,6 +4,11 @@ package main
 
 import (
 	"github.com/google/wire"
+	"github.com/mrhelloboy/wehook/interactive/events"
+	repository2 "github.com/mrhelloboy/wehook/interactive/repository"
+	cache2 "github.com/mrhelloboy/wehook/interactive/repository/cache"
+	dao2 "github.com/mrhelloboy/wehook/interactive/repository/dao"
+	service2 "github.com/mrhelloboy/wehook/interactive/service"
 	eventsArt "github.com/mrhelloboy/wehook/internal/events/article"
 	"github.com/mrhelloboy/wehook/internal/repository"
 	"github.com/mrhelloboy/wehook/internal/repository/article"
@@ -17,10 +22,10 @@ import (
 )
 
 var interactiveSvcProvider = wire.NewSet(
-	service.NewInteractiveService,
-	repository.NewCachedInteractiveRepo,
-	dao.NewGormInteractiveDAO,
-	cache.NewRedisInteractiveCache,
+	service2.NewInteractiveService,
+	repository2.NewCachedInteractiveRepo,
+	dao2.NewGormInteractiveDAO,
+	cache2.NewRedisInteractiveCache,
 )
 
 var rankingSvcProvider = wire.NewSet(
@@ -47,7 +52,7 @@ func InitWebServer() *App {
 
 		// consumer
 		// eventsArt.NewInteractiveReadEventConsumer,
-		eventsArt.NewInteractiveReadEventBatchConsumer,
+		events.NewInteractiveReadEventBatchConsumer,
 		// producer
 		eventsArt.NewKafkaProducer,
 

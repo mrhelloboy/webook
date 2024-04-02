@@ -78,7 +78,7 @@ func TestArticleHandler_Publish(t *testing.T) {
 			server.Use(func(ctx *gin.Context) {
 				ctx.Set("claims", &ijwt.UserClaims{Id: 123})
 			})
-			h := NewArticleHandler(tc.mock(ctrl), &logger.NopLogger{})
+			h := NewArticleHandler(tc.mock(ctrl), nil, &logger.NopLogger{})
 			h.RegisterRouters(server)
 
 			// request
