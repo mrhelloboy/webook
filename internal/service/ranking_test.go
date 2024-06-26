@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	intrv1 "github.com/mrhelloboy/wehook/api/proto/gen/intr/v1"
+
 	domain2 "github.com/mrhelloboy/wehook/interactive/domain"
 
-	"github.com/mrhelloboy/wehook/interactive/service"
 	"github.com/mrhelloboy/wehook/internal/domain"
 	svcmocks "github.com/mrhelloboy/wehook/internal/service/mocks"
 	"github.com/stretchr/testify/assert"
@@ -18,13 +19,13 @@ func TestBatchRankingSrv_TopN(t *testing.T) {
 	now := time.Now()
 	testCases := []struct {
 		name     string
-		mock     func(ctrl *gomock.Controller) (ArticleService, service.InteractiveService)
+		mock     func(ctrl *gomock.Controller) (ArticleService, intrv1.InteractiveServiceClient)
 		wantErr  error
 		wantArts []domain.Article
 	}{
 		{
 			name: "计算成功",
-			mock: func(ctrl *gomock.Controller) (ArticleService, service.InteractiveService) {
+			mock: func(ctrl *gomock.Controller) (ArticleService, intrv1.InteractiveServiceClient) {
 				artSvc := svcmocks.NewMockArticleService(ctrl)
 				artSvc.EXPECT().ListPub(gomock.Any(), gomock.Any(), 0, 3).Return([]domain.Article{
 					{Id: 1, Utime: now, Ctime: now},

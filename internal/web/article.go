@@ -5,8 +5,7 @@ import (
 	"strconv"
 	"time"
 
-	domain2 "github.com/mrhelloboy/wehook/interactive/domain"
-	service2 "github.com/mrhelloboy/wehook/interactive/service"
+	intrv1 "github.com/mrhelloboy/wehook/api/proto/gen/intr/v1"
 
 	"golang.org/x/sync/errgroup"
 
@@ -23,12 +22,12 @@ var _ Handler = (*ArticleHandler)(nil)
 
 type ArticleHandler struct {
 	svc      service.ArticleService
-	interSvc service2.InteractiveService
+	interSvc intrv1.InteractiveServiceClient
 	l        logger.Logger
 	biz      string
 }
 
-func NewArticleHandler(svc service.ArticleService, interSvc service2.InteractiveService, l logger.Logger) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc intrv1.InteractiveServiceClient, l logger.Logger) *ArticleHandler {
 	return &ArticleHandler{
 		svc:      svc,
 		interSvc: interSvc,
@@ -76,9 +75,17 @@ func (a *ArticleHandler) Like(ctx *gin.Context) {
 		return
 	}
 	if req.Like {
-		err = a.interSvc.Like(ctx, a.biz, req.Id, uc.Id)
+		_, err = a.interSvc.Like(ctx, &intrv1.LikeRequest{
+			Biz:   a.biz,
+			BizId: req.Id,
+			Uid:   uc.Id,
+		})
 	} else {
-		err = a.interSvc.CancelLike(ctx, a.biz, req.Id, uc.Id)
+		_, err = a.interSvc.CancelLike(ctx, &intrv1.CancelLikeRequest{
+			Biz:   a.biz,
+			BizId: req.Id,
+			Uid:   uc.Id,
+		})
 	}
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{Code: 5, Msg: "系统错误"})
@@ -114,9 +121,14 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 		art, err = a.svc.GetPublishedById(ctx, id, uc.Id)
 		return err
 	})
-	var intr domain2.Interactive
+
+	var getResp *intrv1.GetResponse
 	eg.Go(func() error {
-		intr, err = a.interSvc.Get(ctx, a.biz, id, uc.Id)
+		getResp, err = a.interSvc.Get(ctx, &intrv1.GetRequest{
+			Biz:   a.biz,
+			BizId: id,
+			Uid:   uc.Id,
+		})
 		// 这里可以容错
 		if err != nil {
 			// 记日志
@@ -133,11 +145,16 @@ func (a *ArticleHandler) PubDetail(ctx *gin.Context) {
 	// 添加阅读计数
 	// 注意：因阅读记录非常频繁，并发量一大，会开启很多的 goroutine，导致有巨大压力
 	//go func() {
-	//	er := a.interSvc.IncrReadCnt(ctx, a.biz, art.Id)
+	//	_, er := a.interSvc.IncrReadCnt(ctx, &intrv1.IncrReadCntRequest{
+	//		Biz:   a.biz,
+	//		BizId: art.Id,
+	//	})
 	//	if er != nil {
 	//		a.l.Error("增加阅读计数失败", logger.Int64("aid", art.Id), logger.Error(er))
 	//	}
 	//}()
+
+	intr := getResp.Intr
 
 	ctx.JSON(http.StatusOK, Result{Data: ArticleVO{
 		Id:         art.Id,

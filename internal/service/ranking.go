@@ -2,10 +2,11 @@ package service
 
 import (
 	"context"
+	"errors"
 	"math"
 	"time"
 
-	"github.com/mrhelloboy/wehook/interactive/service"
+	intrv1 "github.com/mrhelloboy/wehook/api/proto/gen/intr/v1"
 
 	"github.com/mrhelloboy/wehook/internal/repository"
 
@@ -21,7 +22,7 @@ type RankingService interface {
 
 type BatchRankingSrv struct {
 	artSvc    ArticleService
-	intrSvc   service.InteractiveService
+	intrSvc   intrv1.InteractiveServiceClient
 	repo      repository.RankingRepository
 	batchSize int
 	n         int
@@ -29,7 +30,7 @@ type BatchRankingSrv struct {
 	load      int64                                    // 负载
 }
 
-func NewBatchRankingSrv(artSvc ArticleService, intrSvc service.InteractiveService, repo repository.RankingRepository) RankingService {
+func NewBatchRankingSrv(artSvc ArticleService, intrSvc intrv1.InteractiveServiceClient, repo repository.RankingRepository) RankingService {
 	return &BatchRankingSrv{
 		artSvc:    artSvc,
 		intrSvc:   intrSvc,
@@ -83,14 +84,20 @@ func (s *BatchRankingSrv) topN(ctx context.Context) ([]domain.Article, error) {
 			return art.Id
 		})
 		// 找对应的点赞数据
-		intrs, err := s.intrSvc.GetByIds(ctx, "article", ids)
+		intrs, err := s.intrSvc.GetByIds(ctx, &intrv1.GetByIdsRequest{
+			Biz: "article",
+			Ids: ids,
+		})
 		if err != nil {
 			return nil, err
+		}
+		if len(intrs.Intrs) == 0 {
+			return nil, errors.New("没有数据")
 		}
 		// 合并计算 score
 		// 排序
 		for _, art := range arts {
-			intr := intrs[art.Id]
+			intr := intrs.Intrs[art.Id]
 			score := s.scoreFunc(art.Utime, intr.LikeCnt)
 			// 考虑这个 score 在不在前 100 名内
 			// 拿到热度最低的

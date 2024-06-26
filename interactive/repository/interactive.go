@@ -153,6 +153,7 @@ func (c *cachedInteractiveRepo) IncrReadCnt(ctx context.Context, biz string, biz
 
 func (c *cachedInteractiveRepo) toDomain(intr dao.Interactive) domain.Interactive {
 	return domain.Interactive{
+		Biz:        intr.Biz,
 		BizId:      intr.BizId,
 		LikeCnt:    intr.LikeCnt,
 		CollectCnt: intr.CollectCnt,
