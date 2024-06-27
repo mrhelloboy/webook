@@ -14,6 +14,7 @@ type InconsistentEvent struct {
 	// DST：以目标表为准
 	Direction string
 	Type      string
+	Columns   map[string]any
 }
 
 const (

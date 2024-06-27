@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/ecodeclub/ekit/slice"
 
 	"github.com/ecodeclub/ekit/syncx/atomicx"
@@ -37,9 +39,17 @@ func NewValidator[T migrator.Entity](base *gorm.DB, target *gorm.DB, l logger.Lo
 	}
 }
 
-func (v *Validator[T]) Validate(ctx context.Context) {
-	v.validateBaseToTarget(ctx)
-	v.validateTargetToBase(ctx)
+func (v *Validator[T]) Validate(ctx context.Context) error {
+	var eg errgroup.Group
+	eg.Go(func() error {
+		v.validateBaseToTarget(ctx)
+		return nil
+	})
+	eg.Go(func() error {
+		v.validateTargetToBase(ctx)
+		return nil
+	})
+	return eg.Wait()
 }
 
 // Validate 调用者可以通过 ctx 来控制校验程序退出
