@@ -2,9 +2,8 @@ package dao
 
 import (
 	"context"
+	"github.com/mrhelloboy/wehook/pkg/migrator"
 	"time"
-
-	"github.com/mrhelloboy/wehook/migrator"
 
 	"gorm.io/gorm/clause"
 
