@@ -1,11 +1,14 @@
+//go:build learn
+
 package fixer
 
 import (
 	"context"
 	"errors"
 
-	"github.com/mrhelloboy/wehook/migrator"
-	"github.com/mrhelloboy/wehook/migrator/events"
+	"github.com/mrhelloboy/wehook/pkg/migrator"
+	"github.com/mrhelloboy/wehook/pkg/migrator/events"
+
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )

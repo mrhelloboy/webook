@@ -26,3 +26,11 @@ func TestGRPCClient(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(resp.Intr)
 }
+
+func TestGRPCDoubleWrite(t *testing.T) {
+	cc, err := grpc.NewClient("localhost:8090", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+	client := intrv1.NewInteractiveServiceClient(cc)
+	_, err = client.IncrReadCnt(context.Background(), &intrv1.IncrReadCntRequest{Biz: "test", BizId: 2})
+	require.NoError(t, err)
+}

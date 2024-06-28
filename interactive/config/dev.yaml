@@ -1,5 +1,13 @@
 db:
-  dsn: "root:root@tcp(localhost:13306)/webook"
+  src:
+    dsn: "root:root@tcp(localhost:13306)/webook"
+  dst:
+    dsn: "root:root@tcp(localhost:13306)/webook_intr"
+
+migrator:
+  pattern: "SRC_ONLY"
+  web:
+    add: ":8082"
 
 redis:
   addr: "localhost:6379"

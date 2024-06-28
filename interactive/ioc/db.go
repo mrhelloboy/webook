@@ -3,6 +3,8 @@ package ioc
 import (
 	"time"
 
+	"github.com/mrhelloboy/wehook/pkg/gormx/connpool"
+
 	promsdk "github.com/prometheus/client_golang/prometheus"
 
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
@@ -10,12 +12,35 @@ import (
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
-	glogger "gorm.io/gorm/logger"
-	"gorm.io/plugin/opentelemetry/tracing"
-	"gorm.io/plugin/prometheus"
 )
 
-func InitDB(l logger.Logger) *gorm.DB {
+type (
+	SrcDB *gorm.DB
+	DstDB *gorm.DB
+)
+
+func InitSRC(l logger.Logger) SrcDB {
+	return InitDB(l, "src")
+}
+
+func InitDST(l logger.Logger) DstDB {
+	return InitDB(l, "dst")
+}
+
+func InitDoubleWritePool(src SrcDB, dst DstDB) *connpool.DoubleWritePool {
+	pattern := viper.GetString("migrator.pattern")
+	return connpool.NewDoubleWritePool(src.ConnPool, dst.ConnPool, pattern)
+}
+
+func InitBizDB(pool *connpool.DoubleWritePool) *gorm.DB {
+	db, err := gorm.Open(mysql.New(mysql.Config{Conn: pool}))
+	if err != nil {
+		panic(err)
+	}
+	return db
+}
+
+func InitDB(l logger.Logger, key string) *gorm.DB {
 	type Config struct {
 		DSN string `yaml:"dsn"`
 	}
@@ -23,66 +48,22 @@ func InitDB(l logger.Logger) *gorm.DB {
 	cfg := Config{
 		DSN: "root:root@tcp(localhost:3306)/webook-default?charset=utf8mb4&parseTime=True&loc=Local",
 	}
-	err := viper.UnmarshalKey("db", &cfg)
+	err := viper.UnmarshalKey("db."+key, &cfg)
 	if err != nil {
 		panic(err)
 	}
 
 	// 数据库连接
-	db, err := gorm.Open(mysql.Open(cfg.DSN), &gorm.Config{
-		Logger: glogger.New(gormLoggerFunc(l.Debug), glogger.Config{
-			SlowThreshold:             time.Millisecond * 10,
-			IgnoreRecordNotFoundError: true,
-			ParameterizedQueries:      true,
-			LogLevel:                  glogger.Info,
-		}),
-	})
-	if err != nil {
-		// 只会在初始化过程中 panic
-		// panic 相当于整个 goroutine 结束
-		// 一旦初始化过程出错，应用就不要启动了
-		panic(err)
-	}
-
-	// 添加 prometheus 监控
-	err = db.Use(prometheus.New(prometheus.Config{
-		DBName:          "webook",
-		RefreshInterval: 15,
-		StartServer:     false,
-		MetricsCollector: []prometheus.MetricsCollector{
-			&prometheus.MySQL{
-				// thread running 表示当前正在执行的线程数，也就是当前并发执行 sql 语句或者命令的线程数量。
-				// 该指标可以用来监控数据库的负载情况。
-				VariableNames: []string{"thread_running"},
-			},
-		},
-	}))
+	db, err := gorm.Open(mysql.Open(cfg.DSN), &gorm.Config{})
 	if err != nil {
 		panic(err)
 	}
 
-	// 监控 sql 语句的执行时间
-	pcb := newCallbacks()
-	err = db.Use(pcb)
+	cb := newCallbacks(key)
+	err = db.Use(cb)
 	if err != nil {
 		panic(err)
 	}
-
-	err = db.Use(tracing.NewPlugin(
-		tracing.WithDBName("webook"),
-		tracing.WithQueryFormatter(func(query string) string {
-			l.Debug("", logger.String("query", query))
-			return query
-		}),
-		// 不要记录 metrics
-		tracing.WithoutMetrics(),
-		// 不要记录查询参数
-		tracing.WithoutQueryVariables(),
-	))
-	if err != nil {
-		panic(err)
-	}
-
 	// 建表
 	err = dao.InitTables(db)
 	if err != nil {
@@ -190,10 +171,10 @@ func (c *Callbacks) after(typ string) func(*gorm.DB) {
 	}
 }
 
-func newCallbacks() *Callbacks {
+func newCallbacks(key string) *Callbacks {
 	vector := promsdk.NewSummaryVec(promsdk.SummaryOpts{
 		Namespace: "geekbang_daming",
-		Subsystem: "webook",
+		Subsystem: "webook_" + key,
 		Name:      "gorm_query_time",
 		Help:      "统计 GORM 的执行时间",
 		ConstLabels: map[string]string{

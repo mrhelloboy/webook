@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/mrhelloboy/wehook/migrator"
+
 	"gorm.io/gorm/clause"
 
 	"gorm.io/gorm"
@@ -199,6 +201,15 @@ type Interactive struct {
 	CollectCnt int64
 	Ctime      int64
 	Utime      int64
+}
+
+func (i Interactive) ID() int64 {
+	return i.Id
+}
+
+func (i Interactive) CompareTo(dst migrator.Entity) bool {
+	dstVal, ok := dst.(Interactive)
+	return ok && i == dstVal
 }
 
 // UserLikeBiz 用户点赞业务表
