@@ -31,7 +31,7 @@ func InitAPP() *App {
 	interactiveRepository := repository.NewCachedInteractiveRepo(interactiveDAO, interactiveCache, logger)
 	interactiveService := service.NewInteractiveService(interactiveRepository, logger)
 	interactiveServiceServer := grpc.NewInteractiveServiceServer(interactiveService)
-	server := ioc.InitGRPCxServer(interactiveServiceServer)
+	server := ioc.InitGRPCxServer(logger, interactiveServiceServer)
 	client := ioc.InitKafka()
 	interactiveReadEventConsumer := events.NewInteractiveReadEventConsumer(client, interactiveRepository, logger)
 	consumer := ioc.InitFixDataConsumer(logger, srcDB, dstDB, client)

@@ -5,7 +5,8 @@ redis:
   addr: "localhost:6379"
 
 etcd:
-  addr: "localhost:12378"
+  endpoints:
+    - "localhost:12378"
 
 kafka:
   addrs:
@@ -14,6 +15,6 @@ kafka:
 grpc:
   client:
     intr:
-      addr: "localhost:8090"
+      name: "interactive"
       secure: false
       threshold: 100

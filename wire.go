@@ -4,7 +4,6 @@ package main
 
 import (
 	"github.com/google/wire"
-	"github.com/mrhelloboy/wehook/interactive/events"
 	repository2 "github.com/mrhelloboy/wehook/interactive/repository"
 	cache2 "github.com/mrhelloboy/wehook/interactive/repository/cache"
 	dao2 "github.com/mrhelloboy/wehook/interactive/repository/dao"
@@ -44,8 +43,10 @@ func InitWebServer() *App {
 		ioc.NewSyncProducer,
 		ioc.NewConsumers,
 
-		interactiveSvcProvider,
-		ioc.InitIntrGRPCClient,
+		// interactiveSvcProvider,
+		// ioc.InitIntrGRPCClient,
+		ioc.InitEtcd,
+		ioc.InitIntrGRPCClientV1,
 		rankingSvcProvider,
 		ioc.InitRLockClient,
 		ioc.InitJobs,
@@ -53,7 +54,7 @@ func InitWebServer() *App {
 
 		// consumer
 		// eventsArt.NewInteractiveReadEventConsumer,
-		events.NewInteractiveReadEventBatchConsumer,
+		// events.NewInteractiveReadEventBatchConsumer,
 		// producer
 		eventsArt.NewKafkaProducer,
 
