@@ -33,6 +33,8 @@ func (*wrrPickerBuilder) Build(info base.PickerBuildInfo) balancer.Picker {
 			weightVal := md["weight"]
 			if weight, ok := weightVal.(float64); ok {
 				cc.weight = int(weight)
+
+				cc.labels = md["labels"].([]string)
 			}
 		}
 
@@ -63,6 +65,7 @@ func (p *wrrPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
 
 	var total int
 	var maxCC *conn
+	// label := info.Ctx.Value("label")
 	for _, cc := range p.conns {
 		total += cc.weight
 		cc.currentWeight = cc.currentWeight + cc.weight
@@ -88,7 +91,8 @@ func (p *wrrPicker) Pick(info balancer.PickInfo) (balancer.PickResult, error) {
 
 // conn 表示节点
 type conn struct {
-	weight        int              // 权重
+	weight        int // 权重
+	labels        []string
 	currentWeight int              // 当前权重
 	cc            balancer.SubConn // 节点，在gRPC中代表真正的一个节点
 }
