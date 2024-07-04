@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"time"
+
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/repository/cache"
 	"github.com/mrhelloboy/wehook/internal/repository/dao"
-	"time"
 )
 
 var (
@@ -72,6 +74,12 @@ func (r *CachedUserRepository) FindById(ctx context.Context, id int64) (domain.U
 	// 选加载，需要做好兜底，万一 Redis 真的蹦了，要保护你的数据库
 	// 1. 数据库限流 - ORM的 middleware,但不能用redis来做限流，因redis已经崩掉了，用内存做单机限流
 	// 选不加载，用户体验差一点
+
+	if ctx.Value("limited") == "true" {
+		// 不进行数据库查询
+		return domain.User{}, errors.New("触发限流，缓存未命中，不查询数据库")
+	}
+
 	ue, err := r.dao.FindById(ctx, id)
 	if err != nil {
 		return domain.User{}, err

@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+
 	"github.com/mrhelloboy/wehook/internal/domain"
 	"github.com/mrhelloboy/wehook/internal/repository"
 	"github.com/mrhelloboy/wehook/pkg/logger"
@@ -92,6 +93,12 @@ func (svc *UserSvc) FindOrCreateByWechat(ctx context.Context, info domain.Wechat
 		// 业务中大多数请求时进入这个逻辑
 		// err 为 nil，会进入该逻辑，说明用户存在
 		return u, err
+	}
+
+	// 慢路径
+	// 在降级、限流、熔断时，禁止注册
+	if ctx.Value("limited") == "true" {
+		return domain.User{}, errors.New("触发限流，禁止注册")
 	}
 
 	err = svc.repo.Create(ctx, domain.User{WechatInfo: info})
